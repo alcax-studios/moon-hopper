@@ -44,3 +44,10 @@ Thumbs.db
 
 # Archived (removed) content
 /Archive/
+
+# Licensed or unverified audio (your own recordings and downloads): kept local, never pushed.
+# The game falls back to its synthesized sounds when these are missing.
+/Assets/_Project/Audio/Ambience/
+/Assets/_Project/Audio/Ambience.meta
+/Assets/_Project/Audio/Overrides/
+/Assets/_Project/Audio/Overrides.meta

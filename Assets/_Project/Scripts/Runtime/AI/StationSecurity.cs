@@ -31,7 +31,24 @@ namespace Alcax.AI
         [SerializeField] float replaceAfter = 30f;
 
         readonly List<Operative> guards = new List<Operative>();
-        readonly Dictionary<Civilian, Operative> armed = new Dictionary<Civilian, Operative>();
+readonly Dictionary<Civilian, Operative> armed = new Dictionary<Civilian, Operative>();
+        readonly List<Operative> extras = new List<Operative>();
+
+        /// <summary>A security unit spawned some other way (the admin menu): it follows the station's crime rules too.</summary>
+        public void Adopt(Operative op)
+        {
+            if (op == null || extras.Contains(op)) return;
+            extras.Add(op);
+            op.SetHostile(Wanted, Wanted && PlayerTarget.Instance != null ? PlayerTarget.Instance.Position : (Vector3?)null, 3f);
+            op.Health.Damaged += info => OnGuardHurt(op, info);
+        }
+
+        IEnumerable<Operative> AllUnits()
+        {
+            foreach (var g in guards) if (g != null && !g.IsDead) yield return g;
+            foreach (var x in extras) if (x != null && !x.IsDead) yield return x;
+            foreach (var a in armed.Values) if (a != null && !a.IsDead) yield return a;
+        }
         Squad squad;
         float lastCrime = -100f, lastSeen = -100f, stoodDownAt = -100f;
         string toast; float toastUntil;
@@ -40,6 +57,7 @@ public bool Wanted { get; private set; }
         /// <summary>A guard (or armed staff) is fighting, or recently saw or heard, a hostile operative.</summary>
         public bool ThreatActive { get; private set; }
         public Faction StationFaction => faction;
+        const float GraceSeconds = 12f;
         float lastThreat = -100f;
 
         /// <summary>An operative that is a danger to the station: its faction is hostile to security, or it attacked a guard.</summary>
@@ -126,9 +144,9 @@ public bool Wanted { get; private set; }
             var p = PlayerTarget.Instance;
             ArmAllStaff();
             foreach (var a in armed.Values) if (a != null && !a.IsDead && p != null) a.SetHostile(true, p.Position, 2f);
-            foreach (var g in guards)
+            foreach (var g in AllUnits())
             {
-                if (g == null || g.IsDead || g.HostileToPlayer) continue;
+                if (g.HostileToPlayer) continue;
                 // Witnesses (close, or in sight) react at once; the rest get it over the radio
                 bool sees = p != null && !CoverFinder.Blocked(g.EyePosition, p.HeadPosition);
                 float dist = Vector3.Distance(g.transform.position, where);
@@ -204,10 +222,9 @@ void ArmAllStaff()
 void Update()
         {
             bool threat = false;
-            foreach (var g in guards) if (g != null && !g.IsDead && g.HasNpcThreat) { threat = true; break; }
-            if (!threat) foreach (var a in armed.Values) if (a != null && !a.IsDead && a.HasNpcThreat) { threat = true; break; }
+            foreach (var g in AllUnits()) if (g.HasNpcThreat) { threat = true; break; }
             if (threat) { lastThreat = Time.time; if (!ThreatActive) Toast("SECURITY ALERT: HOSTILES ON THE STATION"); }
-            ThreatActive = threat || Time.time - lastThreat < 5f;
+            ThreatActive = threat || Time.time - lastThreat < GraceSeconds;   // shots right after the last hostile falls aren't crimes
             if (ThreatActive) ArmAllStaff();
             else if (!Wanted && armed.Count > 0 && Time.time - lastThreat > 15f) DisarmStaff();
             if (!Wanted)
@@ -220,11 +237,9 @@ void Update()
                 }
                 return;
             }
-            foreach (var g in guards) if (g != null && !g.IsDead && g.Target is PlayerTarget && g.Perception.CanSee) lastSeen = Time.time;
-            foreach (var a in armed.Values) if (a != null && !a.IsDead && a.Target is PlayerTarget && a.Perception.CanSee) lastSeen = Time.time;
+            foreach (var g in AllUnits()) if (g.Target is PlayerTarget && g.Perception.CanSee) lastSeen = Time.time;
             bool anyAlive = false;
-            foreach (var g in guards) if (g != null && !g.IsDead) anyAlive = true;
-            foreach (var a in armed.Values) if (a != null && !a.IsDead) anyAlive = true;
+            foreach (var g in AllUnits()) { anyAlive = true; break; }
             if (!anyAlive || (Time.time - lastCrime > standDownAfter && Time.time - lastSeen > standDownAfter)) StandDown();
         }
 
@@ -232,8 +247,7 @@ void Update()
         {
             Wanted = false;
             stoodDownAt = Time.time;
-            foreach (var g in guards) if (g != null && !g.IsDead) g.SetHostile(false);
-foreach (var a in armed.Values) if (a != null && !a.IsDead) a.SetHostile(false);
+            foreach (var g in AllUnits()) g.SetHostile(false);
             if (!ThreatActive) DisarmStaff();
             Toast(ThreatActive ? "SECURITY: YOU'RE CLEAR, HOSTILES REMAIN" : "SECURITY STOOD DOWN");
         }

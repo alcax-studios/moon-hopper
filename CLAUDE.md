@@ -15,6 +15,7 @@ Guidance for AI agents working in this Unity project. Human-facing docs live in 
 - Read the relevant doc in `docs/` before changing a system, and update it in the same change when behavior or structure changes.
 - Record any significant, hard-to-reverse choice as an ADR in `docs/decisions/` (copy `0000-template.md`).
 - Log every imported or generated art/audio asset in `docs/art/asset-registry.md` with its source and license.
+- Licensed or unverified audio (`Assets/_Project/Audio/Ambience/` and `Audio/Overrides/`) is gitignored and stays local; never commit or push it. The game falls back to synthesized sounds without it.
 - Follow `docs/tech/conventions.md` for folders, naming, and code style.
 - One `MonoBehaviour` per `.cs` file, file named after the class (multiple per file can crash player builds).
 - Add a short entry to `docs/devlog.md` at the end of a meaningful work session.

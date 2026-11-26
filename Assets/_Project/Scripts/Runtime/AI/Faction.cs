@@ -47,6 +47,8 @@ namespace Alcax.AI
 public bool concealedRoutes = true;
         [Tooltip("Factions this one fights on sight (hostility is mutual: either side listing the other is enough).")]
         public Faction[] hostileTo;
+        [Tooltip("Units of this faction treat the player as an enemy from the start (off for station security: they turn on him only after a crime).")]
+        public bool hostileToPlayer = true;
 
         public static bool Hostile(Faction a, Faction b)
         {

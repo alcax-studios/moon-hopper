@@ -44,6 +44,7 @@ MonoBehaviour:
   concealedRoutes: 1
   hostileTo:
   - {fileID: 11400000, guid: 5f7f06eb2c38282409d35e3b6dd734ac, type: 2}
+  hostileToPlayer: 1
   coverDiscipline: 0.85
   patchUpChance: 0.9
   leaderOrders: 1

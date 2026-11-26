@@ -133,6 +133,8 @@ namespace Alcax.AI
             go.name = e.archetype.displayName;
             var op = go.GetComponent<Operative>();
             op.Init(e.archetype, Config, faction, squad, route);
+            var sec = StationSecurity.Instance;
+            if (sec != null && faction != null && faction == sec.StationFaction) sec.Adopt(op);   // spawned security plays by the station's rules
             return op;
         }
 

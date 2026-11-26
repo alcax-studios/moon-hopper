@@ -209,6 +209,7 @@ namespace Alcax.AI
             if (a != null) archetype = a;
             if (c != null) config = c;
             faction = f;
+            HostileToPlayer = f == null || f.hostileToPlayer;
             Squad = squad;
             route = patrol;
             Setup();
@@ -2713,6 +2714,7 @@ HostileToPlayer = on;
             var attacker = Targets.Of(info.Source);
             var from = attacker != null ? attacker.HeadPosition : info.Point - info.Direction * 10f;
             if (attacker is Operative ao && ao != this && (Squad == null || ao.Squad != Squad)) grudges.Add(ao);
+            if (attacker is PlayerTarget pt && !HostileToPlayer && StationSecurity.Instance == null) SetHostile(true, pt.Position, 1f);
             lastHitDir = info.Direction.sqrMagnitude > 0.01f ? info.Direction.normalized : -transform.forward;
             lastHitPoint = info.Point;
             bool commit = Health.Current > 0f && DecideHitResponse(info);

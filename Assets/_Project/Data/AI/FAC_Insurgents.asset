@@ -50,6 +50,7 @@ MonoBehaviour:
   hostileTo:
   - {fileID: 11400000, guid: eb41879da6abb13459d51c8d5fd066c7, type: 2}
   - {fileID: 11400000, guid: e5dceda3a226c234cb2ef641d3596202, type: 2}
+  hostileToPlayer: 1
   coverDiscipline: 0.4
   patchUpChance: 0.5
   leaderOrders: 1

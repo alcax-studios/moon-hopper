@@ -225,6 +225,8 @@ namespace Alcax.EditorTools
             sec.styles = new StyleWeights { ambusher = 1f, stalker = 0.4f, brawler = 0.6f, suppressor = 1f, survivor = 1.4f, opportunist = 0.9f, flanker = 0.9f };
             sec.adaptability = 0.5f; sec.coverDiscipline = 0.55f; sec.concealedRoutes = false; sec.patchUpChance = 0.85f; sec.leaderOrders = true;
             sec.volatility = 1f; sec.breakResistance = 0.1f; sec.canSurrender = true;
+            sec.hostileToPlayer = false;
+            ins.hostileToPlayer = true; so.hostileToPlayer = true;
             EditorUtility.SetDirty(sec);
             // Who fights whom: insurgents against special ops and station security; special ops and security are on the same side
             ins.hostileTo = new[] { so, sec };
