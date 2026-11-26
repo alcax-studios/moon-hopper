@@ -22,4 +22,4 @@ Guidance for AI agents working in this Unity project. Human-facing docs live in 
 ## Environment notes
 
 - The project sits inside OneDrive. OneDrive sync can lock or corrupt files in `Library/` and `Temp/`; exclude them from sync or move the project if odd import errors appear.
-- Local git repo on `main` (no remote yet). `Screenshots/` holds agent verification captures and is gitignored.
+- Git repo on `main`, remote `origin` = https://github.com/alcax-studios/moon-hopper (push there). `Screenshots/` holds agent verification captures and is gitignored.
