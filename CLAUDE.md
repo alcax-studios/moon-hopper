@@ -7,7 +7,8 @@ Guidance for AI agents working in this Unity project. Human-facing docs live in 
 - **Unity** 6000.6.10f1, **URP** (PC + Mobile renderer assets in `Assets/Settings/`)
 - **Input:** Input System package (`Assets/InputSystem_Actions.inputactions`)
 - **Editor control:** `com.unity.pipeline` is installed; drive the live Editor with the Unity CLI (`unity status`, `unity command ...`). Prefer that over hand-editing `.unity` / `.prefab` / `.asset` YAML.
-- **Game concept:** not decided yet. See `docs/design/game-design.md`.
+- **Game:** untitled for now (the old working title MERIDIAN was dropped; names and lore come later), a first-person game set on a station on a desert moon. Keep in-game names generic until the lore is decided. The gameplay is not designed yet. See `docs/design/game-design.md` and `docs/design/art-bible.md`. The old zombie prototype is retired (ADR 0003, `Archive/`).
+- **The level is generated:** `Assets/_Project/Scripts/Editor/AtriumBuilder.cs` (menu **Alcax > Build Atrium Level**) rebuilds `Atrium.unity` and bakes its lighting. Change the builder, not the scene by hand, or the next rebuild wipes your edits. Exit Play mode before building. Weapon assets come from `WeaponAssets` (Alcax > Rebuild Weapon Assets), and the player rig from `PlayerRig`. The combat-AI test map `Playground.unity` comes from `PlaygroundBuilder` (Alcax > Build AI Playground), which also writes the `Data/AI` archetypes, the `Prefabs/AI` operatives, and `Resources/SpawnCatalog` (what the global admin tools can spawn; `AdminTools` runs on every map, created at startup). `Data/AI/CombatAIConfig.asset` is a hand-tuning asset that builders never overwrite.
 
 ## Rules
 
@@ -21,4 +22,4 @@ Guidance for AI agents working in this Unity project. Human-facing docs live in 
 ## Environment notes
 
 - The project sits inside OneDrive. OneDrive sync can lock or corrupt files in `Library/` and `Temp/`; exclude them from sync or move the project if odd import errors appear.
-- No version control yet. See `docs/decisions/` once one is chosen.
+- Local git repo on `main` (no remote yet). `Screenshots/` holds agent verification captures and is gitignored.

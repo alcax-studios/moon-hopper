@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8450a69f7ed87a640bcef9da04a0d020, type: 3}
+  m_Name: ARC_Pointman
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.AI.EnemyArchetype
+  displayName: Pointman
+  maxHealth: 110
+  walkSpeed: 1.7
+  runSpeed: 4.3
+  sprintSpeed: 6
+  fitness: 1.05
+  aggression: 0.85
+  caution: 0.2
+  discipline: 0.35
+  patience: 0.2
+  teamwork: 0.5
+  skill: 0.5
+  nerve: 0.75
+  reactionTime: {x: 0.18, y: 0.3}
+  traitJitter: 0.12
+  standoff: 3
+  coverDiscipline: -0.15
+  preferredRangeMin: 3
+  preferredRangeMax: 10
+  weaponName: Shotgun
+  shotSound: 6
+  damage: 8
+  pellets: 8
+  fireInterval: 0.85
+  magazine: 6
+  reserveRounds: 24
+  reloadTime: 3
+  range: 24
+  spreadBase: 3.2
+  spreadPerShot: 1
+  spreadMax: 5
+  spreadRecovery: 4
+  recoilPerShot: 4
+  burst: {x: 1, y: 1}
+  noiseRadius: 70
+  styles:
+    ambusher: 0.6
+    stalker: 1.6
+    brawler: 2.2
+    suppressor: 0.3
+    survivor: 0.5
+    opportunist: 1.3
+    flanker: 1.2
+  canRush: 1
+  meleeDamage: 35
+  meleeRange: 1.8

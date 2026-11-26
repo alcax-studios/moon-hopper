@@ -1,0 +1,133 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7dd1db4e0914255439d036be0fd63630, type: 3}
+  m_Name: SpawnCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.AI.SpawnCatalog
+  config: {fileID: 11400000, guid: 5a9232398a1fa3b44ad05e17af634469, type: 2}
+  factions:
+  - {fileID: 11400000, guid: 5f7f06eb2c38282409d35e3b6dd734ac, type: 2}
+  - {fileID: 11400000, guid: eb41879da6abb13459d51c8d5fd066c7, type: 2}
+  - {fileID: 11400000, guid: e5dceda3a226c234cb2ef641d3596202, type: 2}
+  roster:
+  - archetype: {fileID: 11400000, guid: f50eec8ff395033498fd62eaadcef515, type: 2}
+    prefab: {fileID: 339323421853957467, guid: 9c91235d6c20d7d47a415bfefefb82b8, type: 3}
+  - archetype: {fileID: 11400000, guid: 4291d5bbaacd4d74b9ea48e930bb2fae, type: 2}
+    prefab: {fileID: 8111885834732889966, guid: 03d062817779f1c44b061d6a2f135043, type: 3}
+  - archetype: {fileID: 11400000, guid: 2fc538bcb4f0b5840a83f0e2c10ace52, type: 2}
+    prefab: {fileID: 5818808699433380294, guid: 98736ffea44f3d44f888fc1259a81c49, type: 3}
+  - archetype: {fileID: 11400000, guid: bf5d025a743e58047b871199c8243da6, type: 2}
+    prefab: {fileID: 3908751376283007114, guid: 165246dbcbf1d8a4a9c493726645b849, type: 3}
+  - archetype: {fileID: 11400000, guid: 5cdba1059dddc364c9d8cf551b0e0490, type: 2}
+    prefab: {fileID: 7014636186810627581, guid: 4d34ac98ad6814246a7de76585045710, type: 3}
+  - archetype: {fileID: 11400000, guid: b46d27b7b871913408a4845210a1d397, type: 2}
+    prefab: {fileID: 4578977649002707975, guid: bab7ecda183555542a7049411792fbd1, type: 3}
+  presets:
+  - label: Patrol (unaware, 2)
+    names: []
+    high: 0
+    patrol: 1
+    faction: 
+    versusFaction: 
+    versusNames: []
+  - label: Rifle squad (4)
+    names:
+    - Rifleman
+    - Rifleman
+    - Rifleman
+    - Rookie
+    high: 0
+    patrol: 0
+    faction: 
+    versusFaction: 
+    versusNames: []
+  - label: Pointmen, shotgun rushers (2)
+    names:
+    - Pointman
+    - Pointman
+    high: 0
+    patrol: 0
+    faction: 
+    versusFaction: 
+    versusNames: []
+  - label: Marksman + Veteran (high ground)
+    names:
+    - Marksman
+    - Veteran
+    high: 1
+    patrol: 0
+    faction: 
+    versusFaction: 
+    versusNames: []
+  - label: Mixed squad (5)
+    names:
+    - Veteran
+    - Rifleman
+    - Pointman
+    - Rookie
+    - Marksman
+    high: 0
+    patrol: 0
+    faction: 
+    versusFaction: 
+    versusNames: []
+  - label: Big squad (10)
+    names:
+    - Veteran
+    - Rifleman
+    - Rifleman
+    - Rifleman
+    - Pointman
+    - Pointman
+    - Rookie
+    - Rookie
+    - Rifleman
+    - Marksman
+    high: 0
+    patrol: 0
+    faction: 
+    versusFaction: 
+    versusNames: []
+  - label: Security guards (2)
+    names:
+    - Guard
+    - Guard
+    high: 0
+    patrol: 0
+    faction: Station Security
+    versusFaction: 
+    versusNames: []
+  - label: Insurgent assault squad (4)
+    names:
+    - Rifleman
+    - Rifleman
+    - Pointman
+    - Rookie
+    high: 0
+    patrol: 0
+    faction: Insurgents
+    versusFaction: 
+    versusNames: []
+  - label: 'Skirmish: insurgents vs special ops (4 v 4)'
+    names:
+    - Rifleman
+    - Rifleman
+    - Pointman
+    - Rookie
+    high: 0
+    patrol: 0
+    faction: Insurgents
+    versusFaction: Special Ops
+    versusNames:
+    - Veteran
+    - Rifleman
+    - Rifleman
+    - Marksman

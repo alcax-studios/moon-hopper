@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9aca3121e963cb4f9982d304874ae1c, type: 3}
+  m_Name: FAC_Security
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.AI.Faction
+  displayName: Station Security
+  jacket: {r: 0.11764706, g: 0.14901961, b: 0.2, a: 1}
+  gear: {r: 0.078431375, g: 0.09411765, b: 0.12941177, a: 1}
+  jacketVariety: []
+  aggression: -0.05
+  caution: 0.05
+  discipline: 0.05
+  patience: 0
+  teamwork: 0.1
+  skill: 0
+  nerve: -0.05
+  reactionScale: 1
+  jitterScale: 1
+  radio: 1
+  calloutChance: 0.85
+  shoutRadius: 35
+  radioDelay: 0.5
+  styles:
+    ambusher: 1
+    stalker: 0.4
+    brawler: 0.6
+    suppressor: 1
+    survivor: 1.4
+    opportunist: 0.9
+    flanker: 0.9
+  volatility: 1
+  breakResistance: 0.1
+  canSurrender: 1
+  adaptability: 0.5
+  concealedRoutes: 0
+  hostileTo:
+  - {fileID: 11400000, guid: 5f7f06eb2c38282409d35e3b6dd734ac, type: 2}
+  coverDiscipline: 0.55
+  patchUpChance: 0.85
+  leaderOrders: 1

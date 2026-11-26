@@ -41,3 +41,6 @@ sysinfo.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Archived (removed) content
+/Archive/

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d844f0e35ac8a34baa5e24fac946b48, type: 3}
+  m_Name: W_Rifle
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Combat.WeaponData
+  displayName: Rifle
+  kind: 1
+  sound: 5
+  viewModel: {fileID: 2537585836424367335, guid: 0b7076eda51ae834fa4adc0c9569d69e, type: 3}
+  damage: 20
+  range: 110
+  cooldown: 0.1
+  automatic: 1
+  windup: 0.08
+  swingAngle: 80
+  maxTargets: 1
+  pellets: 1
+  spread: 1.1
+  magazineSize: 30
+  ammoType: 3
+  startingReserve: 60
+  reloadTime: 2.1
+  reloadPerShell: 0
+  noiseRadius: 65
+  knockback: 0.6
+  recoil: 1.15
+  shake: 0.08
+  hitStop: 0

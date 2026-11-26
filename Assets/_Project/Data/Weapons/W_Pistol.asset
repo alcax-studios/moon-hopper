@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d844f0e35ac8a34baa5e24fac946b48, type: 3}
+  m_Name: W_Pistol
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Combat.WeaponData
+  displayName: Pistol
+  kind: 1
+  sound: 3
+  viewModel: {fileID: 5453356097783199456, guid: ac7aa44fcc2e8034f94f962f1da36f06, type: 3}
+  damage: 28
+  range: 70
+  cooldown: 0.17
+  automatic: 0
+  windup: 0.08
+  swingAngle: 80
+  maxTargets: 1
+  pellets: 1
+  spread: 0.8
+  magazineSize: 9
+  ammoType: 1
+  startingReserve: 18
+  reloadTime: 1.35
+  reloadPerShell: 0
+  noiseRadius: 35
+  knockback: 0.8
+  recoil: 2.2
+  shake: 0.12
+  hitStop: 0.04

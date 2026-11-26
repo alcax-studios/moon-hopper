@@ -35,4 +35,14 @@ Until the art is ready, build mechanics with placeholder shapes (primitives or P
 
 - **Models:** Scale Factor 1. Don't import cameras or lights. Extract materials into `Materials/`.
 - **Textures:** Mark normal maps as Normal Map. Set Max Size to the smallest size that looks right.
-- **Audio:** See the Audio section, to be added once audio work starts.
+- **Audio:** see below.
+
+## Audio: replacing synthesized sounds with real recordings
+
+Every sound starts out synthesized in code (`AudioSynth`). To replace one:
+
+1. Drop one or more audio files (.wav, .ogg, or .mp3) into `Assets/_Project/Audio/Overrides/<SoundName>/`. The folder names match the `Sfx` enum: `Groan`, `ZombieHurt`, `ZombieDie`, `ZombieAttack`, `Pistol`, `Shotgun`, `Swing`, `BluntHit`, `BladeHit`, `Punch`, `Footstep`, `AmbientBed`, and so on.
+2. Run **Alcax > Refresh Sound Overrides** (the level build also runs it).
+3. With several files in a folder, one is picked at random each time it plays. Per-sound volume is set in `Audio/Resources/SoundBank.asset`.
+
+Free sources: Freesound.org (filter by the CC0 license), the Sonniss GDC game audio bundles (royalty-free), and Kenney.nl (CC0). Log every file in the [asset registry](asset-registry.md) with its license.

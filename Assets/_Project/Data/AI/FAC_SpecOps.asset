@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9aca3121e963cb4f9982d304874ae1c, type: 3}
+  m_Name: FAC_SpecOps
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.AI.Faction
+  displayName: Special Ops
+  jacket: {r: 0.16470589, g: 0.1764706, b: 0.19215687, a: 1}
+  gear: {r: 0.23137255, g: 0.24705882, b: 0.21960784, a: 1}
+  jacketVariety: []
+  aggression: 0.05
+  caution: 0.05
+  discipline: 0.3
+  patience: 0.15
+  teamwork: 0.3
+  skill: 0.25
+  nerve: 0.3
+  reactionScale: 0.85
+  jitterScale: 0.7
+  radio: 1
+  calloutChance: 0.75
+  shoutRadius: 30
+  radioDelay: 0.4
+  styles:
+    ambusher: 1.2
+    stalker: 1.5
+    brawler: 0.5
+    suppressor: 1.3
+    survivor: 0.7
+    opportunist: 1.3
+    flanker: 1.6
+  volatility: 0.6
+  breakResistance: 0.3
+  canSurrender: 0
+  adaptability: 0.8
+  concealedRoutes: 1
+  hostileTo:
+  - {fileID: 11400000, guid: 5f7f06eb2c38282409d35e3b6dd734ac, type: 2}
+  coverDiscipline: 0.85
+  patchUpChance: 0.9
+  leaderOrders: 1

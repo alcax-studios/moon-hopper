@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8450a69f7ed87a640bcef9da04a0d020, type: 3}
+  m_Name: ARC_Marksman
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.AI.EnemyArchetype
+  displayName: Marksman
+  maxHealth: 90
+  walkSpeed: 1.7
+  runSpeed: 4.3
+  sprintSpeed: 5.6
+  fitness: 0.95
+  aggression: 0.25
+  caution: 0.75
+  discipline: 0.85
+  patience: 0.85
+  teamwork: 0.4
+  skill: 0.8
+  nerve: 0.55
+  reactionTime: {x: 0.25, y: 0.4}
+  traitJitter: 0.12
+  standoff: 14
+  coverDiscipline: 0.1
+  preferredRangeMin: 25
+  preferredRangeMax: 60
+  weaponName: DMR
+  shotSound: 29
+  damage: 38
+  pellets: 1
+  fireInterval: 0.55
+  magazine: 10
+  reserveRounds: 30
+  reloadTime: 2.8
+  range: 140
+  spreadBase: 0.15
+  spreadPerShot: 0.6
+  spreadMax: 2
+  spreadRecovery: 3
+  recoilPerShot: 3
+  burst: {x: 1, y: 1}
+  noiseRadius: 80
+  styles:
+    ambusher: 2.2
+    stalker: 0.4
+    brawler: 0.15
+    suppressor: 0.8
+    survivor: 1.3
+    opportunist: 1.2
+    flanker: 0.4
+  canRush: 0
+  meleeDamage: 20
+  meleeRange: 1.5

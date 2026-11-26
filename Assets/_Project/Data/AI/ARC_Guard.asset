@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8450a69f7ed87a640bcef9da04a0d020, type: 3}
+  m_Name: ARC_Guard
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.AI.EnemyArchetype
+  displayName: Guard
+  maxHealth: 100
+  walkSpeed: 1.45
+  runSpeed: 4.1
+  sprintSpeed: 5.3
+  fitness: 1
+  aggression: 0.35
+  caution: 0.6
+  discipline: 0.55
+  patience: 0.5
+  teamwork: 0.6
+  skill: 0.45
+  nerve: 0.45
+  reactionTime: {x: 0.25, y: 0.42}
+  traitJitter: 0.12
+  standoff: 6
+  coverDiscipline: 0.05
+  preferredRangeMin: 7
+  preferredRangeMax: 20
+  weaponName: Pistol
+  shotSound: 5
+  damage: 16
+  pellets: 1
+  fireInterval: 0.32
+  magazine: 12
+  reserveRounds: 36
+  reloadTime: 1.8
+  range: 55
+  spreadBase: 0.9
+  spreadPerShot: 0.5
+  spreadMax: 4
+  spreadRecovery: 5
+  recoilPerShot: 1.6
+  burst: {x: 1, y: 3}
+  noiseRadius: 55
+  styles:
+    ambusher: 0.8
+    stalker: 0.3
+    brawler: 0.4
+    suppressor: 0.8
+    survivor: 1.6
+    opportunist: 0.8
+    flanker: 0.8
+  canRush: 0
+  meleeDamage: 20
+  meleeRange: 1.5

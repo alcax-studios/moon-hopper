@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d844f0e35ac8a34baa5e24fac946b48, type: 3}
+  m_Name: W_Machete
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Combat.WeaponData
+  displayName: Machete
+  kind: 0
+  sound: 2
+  viewModel: {fileID: 1638036586904864705, guid: 2236ad628e506e84daa7d43b28d826b9, type: 3}
+  damage: 46
+  range: 2
+  cooldown: 0.55
+  automatic: 0
+  windup: 0.08
+  swingAngle: 85
+  maxTargets: 1
+  pellets: 1
+  spread: 1
+  magazineSize: 0
+  ammoType: 0
+  startingReserve: 0
+  reloadTime: 1.2
+  reloadPerShell: 0
+  noiseRadius: 35
+  knockback: 1.4
+  recoil: 2
+  shake: 0.25
+  hitStop: 0.05

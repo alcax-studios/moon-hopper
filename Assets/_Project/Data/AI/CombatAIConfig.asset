@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b8051450c6246043b5f47cebaff3d47, type: 3}
+  m_Name: CombatAIConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.AI.CombatAIConfig
+  visionRange: 70
+  focalAngle: 40
+  peripheralAngle: 150
+  focalGain: 2.2
+  peripheralGain: 0.55
+  crouchVisibility: 0.55
+  stillVisibility: 0.7
+  firingVisibility: 2.5
+  flashlightVisibility: 1.5
+  awarenessDecay: 0.08
+  combatAwarenessDecay: 0.025
+  alertAwarenessDecay: 0.006
+  suspiciousAt: 0.2
+  alertAt: 0.55
+  combatAt: 0.85
+  uncertaintyGrowth: 1.4
+  lostAfter: 7
+  decisionInterval: 0.3
+  scoreNoise: 0.09
+  noiseResample: 3.5
+  commitMargin: 0.18
+  commitDecaySeconds: 6
+  shareDelay: 0.7
+  shareError: 1.5
+  useAttention: 1
+  useStandoff: 1
+  useOccupancySearch: 1
+  usePreAim: 1
+  occupancySpread: 3
+  coverSearchRadius: 18
+  allySpacing: 2.6

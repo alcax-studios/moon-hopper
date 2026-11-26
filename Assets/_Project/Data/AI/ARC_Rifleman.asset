@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8450a69f7ed87a640bcef9da04a0d020, type: 3}
+  m_Name: ARC_Rifleman
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.AI.EnemyArchetype
+  displayName: Rifleman
+  maxHealth: 100
+  walkSpeed: 1.7
+  runSpeed: 4.3
+  sprintSpeed: 5.6
+  fitness: 1
+  aggression: 0.5
+  caution: 0.5
+  discipline: 0.55
+  patience: 0.5
+  teamwork: 0.6
+  skill: 0.55
+  nerve: 0.5
+  reactionTime: {x: 0.22, y: 0.36}
+  traitJitter: 0.12
+  standoff: 7
+  coverDiscipline: 0
+  preferredRangeMin: 10
+  preferredRangeMax: 28
+  weaponName: Rifle
+  shotSound: 29
+  damage: 13
+  pellets: 1
+  fireInterval: 0.11
+  magazine: 30
+  reserveRounds: 120
+  reloadTime: 2.3
+  range: 90
+  spreadBase: 0.7
+  spreadPerShot: 0.35
+  spreadMax: 4
+  spreadRecovery: 6
+  recoilPerShot: 0.9
+  burst: {x: 3, y: 6}
+  noiseRadius: 65
+  styles:
+    ambusher: 1
+    stalker: 0.8
+    brawler: 0.8
+    suppressor: 1.4
+    survivor: 1
+    opportunist: 1
+    flanker: 1.1
+  canRush: 0
+  meleeDamage: 25
+  meleeRange: 1.6
