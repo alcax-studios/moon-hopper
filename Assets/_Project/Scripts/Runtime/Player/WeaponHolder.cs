@@ -879,7 +879,10 @@ namespace Alcax.Player
             if (vcam != null)
             {
                 float target = o.Data.kind == WeaponKind.Melee ? meleeAimFov : gunAimFov;
-                vcam.Lens.FieldOfView = Mathf.Lerp(hipFov, target, Ease.InOutCubic(aim));
+                float fov = Mathf.Lerp(hipFov, target, Ease.InOutCubic(aim));
+                // A conversation frames the person you're talking to
+                if (DialogueCamera.Weight > 0f) fov = Mathf.Lerp(fov, DialogueCamera.Fov, Ease.InOutCubic(DialogueCamera.Weight));
+                vcam.Lens.FieldOfView = fov;
             }
         }
 

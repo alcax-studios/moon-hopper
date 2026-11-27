@@ -31,6 +31,7 @@ namespace Alcax.Core
 
         /// <summary>Gameplay input is ignored until this time (so the click that closes a menu doesn't also swing).</summary>
         public static float InputResumeTime;
+        int relockFrames;
         public static bool InputLive => IsPlaying && Time.unscaledTime >= InputResumeTime && !AdminSettings.ConsoleOpen;
 
         void Awake()
@@ -69,7 +70,7 @@ namespace Alcax.Core
                 case GameState.Menu:
                 case GameState.Transfer:
                 case GameState.Prompt:
-                    if (kb != null && kb.escapeKey.wasPressedThisFrame) SetState(GameState.Playing);
+                    if (kb != null && kb.escapeKey.wasPressedThisFrame) { SetState(GameState.Playing); relockFrames = 6; }
                     break;
                 case GameState.Ended:
                     if (kb != null && kb.rKey.wasPressedThisFrame) Restart();
@@ -78,7 +79,14 @@ namespace Alcax.Core
 
             // Keep the cursor matching the state: locked in play (after closing a menu, a refocus, or anything that
             // freed it), free in menus. The Editor can drop the lock on its own, so this runs every frame.
-            bool wantLocked = State == GameState.Playing && !AdminSettings.ConsoleOpen;
+bool wantLocked = State == GameState.Playing && !AdminSettings.ConsoleOpen;
+            // The Editor frees the mouse on Esc itself, after we've locked it, while the lock state still reads Locked.
+            // After closing something with Esc, drop and re-take the lock for a few frames to win it back.
+            if (relockFrames > 0)
+            {
+                relockFrames--;
+                if (wantLocked) { Cursor.lockState = CursorLockMode.None; Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
+            }
             if (Application.isFocused && (wantLocked ? Cursor.lockState != CursorLockMode.Locked || Cursor.visible : Cursor.lockState != CursorLockMode.None || !Cursor.visible))
                 ApplyCursor();
         }

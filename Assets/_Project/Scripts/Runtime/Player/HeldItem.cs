@@ -60,17 +60,9 @@ namespace Alcax.Player
                 return;
             }
             if (!def.Consumable) return;
-            if (held)
-            {
-                if (useT < 0f) { useT = 0f; SoundManager.Play2D(Sfx.Equip, 0.35f, 0.1f); }
-                useT += Time.deltaTime / Mathf.Max(0.1f, def.useTime);
-                if (useT >= 1f)
-                {
-                    useT = -1f;
-                    inv.Consume(new SlotRef(SlotArea.Hotbar, inv.Selected));
-                }
-            }
-            else useT = -1f;
+            // A click uses it, there and then
+            useT = -1f;
+            if (pressed) inv.Consume(new SlotRef(SlotArea.Hotbar, inv.Selected));
         }
 
         void Show(ItemDefinition def)

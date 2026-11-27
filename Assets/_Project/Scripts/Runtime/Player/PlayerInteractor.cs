@@ -48,8 +48,8 @@ namespace Alcax.Player
                 if (FocusedNpc != null) return $"[E]   TALK TO {FocusedNpc.displayName.ToUpperInvariant()}";
                 if (FocusedThing is WorldItem wi && wi.Owned)
                     return $"<color=#E86A5A>[E]   {FocusedThing.Label}</color>";
-                if (FocusedThing != null) return $"[E]   {FocusedThing.Label}";
-                if (Focused != null) return $"[E]   PICK UP {Focused.Label}";
+                if (FocusedThing != null) return FocusedThing.TryGetComponent<Lock>(out var lk) && lk.Locked ? $"[E]   {FocusedThing.Label}   <color=#E8E1D088>LOCKED</color>" : $"[E]   {FocusedThing.Label}";
+                if (Focused != null) return Focused.Owned ? $"<color=#E86A5A>[E]   STEAL {Focused.Label}</color>" : $"[E]   PICK UP {Focused.Label}";
                 return null;
             }
         }
@@ -167,7 +167,11 @@ namespace Alcax.Player
                 if (debug) FocusedThing.Interact(gameObject);
                 else { pending = FocusedThing; pressedAt = Time.time; }
             }
-            else if (FocusedThing != null) FocusedThing.Interact(gameObject);
+            else if (FocusedThing != null)
+            {
+                if (FocusedThing.TryGetComponent<Lock>(out var lk) && !lk.TryUnlock(GetComponent<PlayerInventory>())) return;
+                FocusedThing.Interact(gameObject);
+            }
             else if (Focused != null) Focused.Collect(gameObject);
             else if (FocusedGrab != null) grabber.Grab(FocusedGrab, grabPoint);
         }

@@ -47,6 +47,10 @@ namespace Alcax.Player
 
         InputAction move, look, jump, sprint, crouch;
         PlayerVitals vitals;
+        // Forgiving jumps: a little after leaving the ground (coyote time), a little before landing (buffer)
+        const float CoyoteTime = 0.15f, JumpBuffer = 0.12f;
+        float lastGroundedAt = -10f, jumpPressedAt = -10f;
+        bool jumpedThisAir;
         float standHeight, crouchBlend, sprintBob;
         CharacterController cc;
         Health health;
@@ -70,6 +74,21 @@ namespace Alcax.Player
         public Vector3 BobOffset { get; private set; }
         public bool Grounded => cc.isGrounded;
         public bool IsSprinting { get; private set; }
+public float SprintSpeed => sprintSpeed;
+
+        /// <summary>Turn the view toward a point (t: 0..1 of the way this call). Used to frame a conversation.</summary>
+        public void TurnToward(Vector3 point, float t)
+        {
+            var dir = point - head.position;
+            if (dir.sqrMagnitude < 0.0001f) return;
+            dir.Normalize();
+            float wantYaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
+            float wantPitch = Mathf.Clamp(-Mathf.Asin(dir.y) * Mathf.Rad2Deg, -pitchLimit, pitchLimit);
+            yaw = Mathf.LerpAngle(yaw, wantYaw, t);
+            pitch = Mathf.Lerp(pitch, wantPitch, t);
+            transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            head.localRotation = Quaternion.Euler(pitch - recoilCurrent, 0f, 0f);
+        }
         /// <summary>Hold C or Left Ctrl. Lowers the head and capsule, slows movement, and quiets footsteps.</summary>
         public bool IsCrouching { get; private set; }
         /// <summary>Dev fly mode: no collision or gravity, move where you look (Space up, C down, Shift fast).</summary>
@@ -117,6 +136,7 @@ namespace Alcax.Player
             health = GetComponent<Health>();
             vitals = GetComponent<PlayerVitals>();
             if (vitals == null) vitals = gameObject.AddComponent<PlayerVitals>();
+            if (GetComponent<DialogueCamera>() == null) gameObject.AddComponent<DialogueCamera>();
             var map = actions.FindActionMap("Player", true);
             move = map.FindAction("Move", true);
             look = map.FindAction("Look", true);
@@ -178,19 +198,34 @@ namespace Alcax.Player
             float accel = cc.isGrounded ? acceleration : acceleration * airControl;
             PlanarVelocity = Vector3.MoveTowards(PlanarVelocity, wish, accel * dt);
 
-            bool wasGrounded = cc.isGrounded;
+bool wasGrounded = cc.isGrounded;
             if (wasGrounded)
             {
-                if (verticalVelocity < 0f) verticalVelocity = -2f;
-                if (InputLive && !debugOverride && jump.WasPressedThisFrame())
-                {
-                    verticalVelocity = Mathf.Sqrt(-2f * gravity * jumpHeight);
-                    vitals?.OnJump();
-                }
+                lastGroundedAt = Time.time;
+                if (verticalVelocity < 0f) { verticalVelocity = -2f; jumpedThisAir = false; }
+            }
+            if (InputLive && !debugOverride && jump.WasPressedThisFrame()) jumpPressedAt = Time.time;
+            bool canJump = !jumpedThisAir && Time.time - lastGroundedAt <= CoyoteTime;
+            if (canJump && Time.time - jumpPressedAt <= JumpBuffer)
+            {
+                verticalVelocity = Mathf.Sqrt(-2f * gravity * jumpHeight);
+                jumpedThisAir = true;
+                jumpPressedAt = -10f;
+                vitals?.OnJump();
             }
             float fallSpeed = verticalVelocity;
             verticalVelocity += gravity * dt;
-            cc.Move((PlanarVelocity + shove + Vector3.up * verticalVelocity) * dt);
+cc.Move((PlanarVelocity + shove + Vector3.up * verticalVelocity) * dt);
+            // Walking down steps or a slope: stay on the ground instead of stepping off into the air each step
+            if (wasGrounded && !cc.isGrounded && !jumpedThisAir && verticalVelocity <= 0f && !NoClip)
+            {
+                float probe = cc.stepOffset + 0.1f;
+                if (Physics.SphereCast(transform.position + Vector3.up * (cc.radius + 0.05f), cc.radius * 0.9f, Vector3.down, out var gh, probe + 0.05f, ~(1 << 2), QueryTriggerInteraction.Ignore))
+                {
+                    float drop = gh.distance - 0.05f;
+                    if (drop > 0.001f && drop <= probe) cc.Move(Vector3.down * (drop + 0.01f));
+                }
+            }
             shove = Vector3.Lerp(shove, Vector3.zero, 1f - Mathf.Exp(-8f * dt));
 
             if (!wasGrounded && cc.isGrounded && fallSpeed < -5f)

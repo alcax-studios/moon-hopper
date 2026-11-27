@@ -72,6 +72,8 @@ namespace Alcax.EditorTools
 
             // ---- Misc ----
             list.Add(Item("mug", "Coffee mug", "A ceramic mug from the food court. Empty.", ItemCategory.Misc, 1, 0.35f, Mug(), d => d.heldScale = 1.1f));
+            list.Add(Item("circuit", "Circuit board", "A scorched logic board pulled from a robot. Someone will pay for the chips.", ItemCategory.Misc, 10, 0.1f, Circuit(), d => d.heldScale = 1.4f));
+            list.Add(Item("safe_key", "Safe key", "A small brass key on a tag: ROOM 1202.", ItemCategory.Misc, 1, 0.02f, SafeKey(), d => d.heldScale = 1.6f));
             list.Add(Item("keycard", "Keycard", "A blank station keycard. Somebody will want this back.", ItemCategory.Misc, 1, 0.02f, Keycard(), d => d.heldScale = 1.4f));
             list.Add(Item("datapad", "Data pad", "A cracked tablet. It still powers on.", ItemCategory.Misc, 1, 0.5f, Datapad(), d => d.heldScale = 1f));
 
@@ -84,7 +86,7 @@ namespace Alcax.EditorTools
                 { "ammo_light", 1 }, { "ammo_shells", 3 }, { "ammo_rifle", 2 },
                 { "bandage", 15 }, { "medkit", 65 }, { "ration", 6 }, { "coffee", 4 }, { "noodles", 9 }, { "wrap", 8 }, { "water", 3 }, { "charge", 7 },
                 { "helmet_security", 140 }, { "cap", 12 }, { "vest_armored", 280 }, { "jacket_work", 45 }, { "pants_cargo", 35 }, { "boots_work", 40 }, { "gloves_tactical", 30 },
-                { "credits", 1 }, { "mug", 3 }, { "keycard", 25 }, { "datapad", 80 },
+                { "credits", 1 }, { "circuit", 18 }, { "safe_key", 5 }, { "mug", 3 }, { "keycard", 25 }, { "datapad", 80 },
             };
             foreach (var d in list) { d.value = prices.TryGetValue(d.id, out var v) ? v : 5; EditorUtility.SetDirty(d); }
             db.items = list.ToArray();
@@ -221,6 +223,24 @@ static GameObject Chips()
                 Prim(PrimitiveType.Cylinder, "Chip" + i, r.transform, new Vector3(0.004f * (i % 2), 0.004f + i * 0.0085f, 0.003f * (i % 3)), new Vector3(0.05f, 0.004f, 0.05f), Vector3.zero, i % 2 == 0 ? gold : teal);
             Prim(PrimitiveType.Cylinder, "Loose", r.transform, new Vector3(0.05f, 0.004f, -0.02f), new Vector3(0.05f, 0.004f, 0.05f), Vector3.zero, gold);
             return Save(r, "credits");
+        }
+
+static GameObject Circuit()
+        {
+            var r = Root0("circuit");
+            Prim(PrimitiveType.Cube, "Board", r.transform, new Vector3(0, 0.003f, 0), new Vector3(0.09f, 0.006f, 0.06f), Vector3.zero, Lit("ItemPcb", new Color(0.1f, 0.35f, 0.18f), 0.4f));
+            Prim(PrimitiveType.Cube, "Chip", r.transform, new Vector3(0.01f, 0.008f, 0f), new Vector3(0.025f, 0.004f, 0.025f), Vector3.zero, M("Grip"));
+            Prim(PrimitiveType.Cube, "Pins", r.transform, new Vector3(-0.03f, 0.007f, 0.015f), new Vector3(0.02f, 0.003f, 0.01f), Vector3.zero, M("Brass"));
+            return Save(r, "circuit");
+        }
+
+        static GameObject SafeKey()
+        {
+            var r = Root0("safe_key");
+            Prim(PrimitiveType.Cylinder, "Bow", r.transform, new Vector3(-0.025f, 0.002f, 0), new Vector3(0.025f, 0.002f, 0.025f), Vector3.zero, M("Brass"));
+            Prim(PrimitiveType.Cube, "Blade", r.transform, new Vector3(0.012f, 0.002f, 0), new Vector3(0.045f, 0.003f, 0.008f), Vector3.zero, M("Brass"));
+            Prim(PrimitiveType.Cube, "Tag", r.transform, new Vector3(-0.055f, 0.002f, 0), new Vector3(0.03f, 0.002f, 0.02f), Vector3.zero, M("Accent"));
+            return Save(r, "safe_key");
         }
 
         static GameObject Keycard()

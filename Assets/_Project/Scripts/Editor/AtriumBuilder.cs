@@ -48,6 +48,7 @@ namespace Alcax.EditorTools
                 Debug.LogError("[AtriumBuilder] Exit Play mode first.");
                 return;
             }
+            flushed = false;
             rng = new System.Random(42);
             render.Clear(); collide.Clear(); mats.Clear(); meshes.Clear();
 
@@ -122,8 +123,8 @@ namespace Alcax.EditorTools
         [MenuItem("Alcax/Bake Atrium Lighting")]
         public static void Bake()
         {
-            // One bake per time of day (Night, Dusk, Day); see AtriumLighting
-            AtriumLighting.BakeAll();
+            // One bake (Day); Alcax > Bake Atrium Lighting (All Times) bakes Dusk and Night too
+            AtriumLighting.BakeQuick();
         }
 
         static void OnBakeDone()
@@ -319,8 +320,13 @@ namespace Alcax.EditorTools
         static float TileFor(string mat, float tile) =>
             mat == "Concrete" || mat == "ConcreteDark" || mat == "Floor" ? AtriumTextures.AndoTile : tile;
 
+        // Static geometry merges once (FlushMeshes); anything added after that would silently never appear
+        static bool flushed;
+        static void LateGeometry() { if (flushed) Debug.LogError("[AtriumBuilder] static geometry added after FlushMeshes: it will not appear. Build it before the flush (or as a GameObject). " + System.Environment.StackTrace); }
+
         static void Add(string mat, Vector3 min, Vector3 max, float tile, bool col = true, bool skipBottom = false)
         {
+            LateGeometry();
             tile = TileFor(mat, tile);
             Acc(render, mat).BoxMinMax(min, max, tile, skipBottom);
             if (col) Acc(collide, "col").BoxMinMax(min, max, tile);
@@ -328,6 +334,7 @@ namespace Alcax.EditorTools
 
         static void AddRot(string mat, Vector3 center, Vector3 size, Quaternion rot, float tile, bool col = true)
         {
+            LateGeometry();
             tile = TileFor(mat, tile);
             Acc(render, mat).Box(center, size, rot, tile);
             if (col) Acc(collide, "col").Box(center, size, rot, tile);
@@ -349,6 +356,7 @@ namespace Alcax.EditorTools
 
         static void FlushMeshes()
         {
+            flushed = true;
             var structure = new GameObject("Structure").transform;
             structure.SetParent(root, false);
             foreach (var kv in render)
@@ -620,7 +628,9 @@ namespace Alcax.EditorTools
             // South mezzanine with a heavy fascia and a cyan underglow
             Add("ConcreteDark", new Vector3(-HX, MezzY - 0.6f, -HZ), new Vector3(HX, MezzY, MezzEdgeZ), 2f);
             Add("Floor", new Vector3(-HX, MezzY, -HZ), new Vector3(HX, MezzY + 0.02f, MezzEdgeZ), 4f, false);
-            Add("Concrete", new Vector3(-HX, MezzY - 1.6f, MezzEdgeZ), new Vector3(HX, MezzY + 0.1f, MezzEdgeZ + 0.6f), 2.1f);
+// The fascia stops at the stair opening: across the top steps it would be a lip taller than a step
+            Add("Concrete", new Vector3(-HX, MezzY - 1.6f, MezzEdgeZ), new Vector3(-2.5f, MezzY + 0.1f, MezzEdgeZ + 0.6f), 2.1f);
+            Add("Concrete", new Vector3(2.5f, MezzY - 1.6f, MezzEdgeZ), new Vector3(HX, MezzY + 0.1f, MezzEdgeZ + 0.6f), 2.1f);
             Add("CyanStrip", new Vector3(-HX, MezzY - 1.65f, MezzEdgeZ + 0.15f), new Vector3(HX, MezzY - 1.6f, MezzEdgeZ + 0.5f), 1f, false);
             // Railing: glass panels with a metal top rail (gap for the stair)
             var glass = Acc(render, "Glass");
@@ -1387,6 +1397,7 @@ namespace Alcax.EditorTools
             var rack = slot.gameObject.AddComponent<Alcax.Loot.PickupRack>();
             SetRef(rack, "prefab", prefab);
             SetFloat(rack, "restockSeconds", restock);
+            SetBool(rack, "stationProperty", true);   // the armory's stock: taking it is stealing (Bayo sells it)
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, slot);
             go.transform.SetPositionAndRotation(pos, slot.rotation);
         }
@@ -1748,6 +1759,7 @@ static readonly List<(Vector3 pos, Vector3 facing)> cafeSeats = new();
 
             // ---- Kitchen (west): a long white run with dark tops, a tall fridge, an island with stools under pendants ----
             Add("WhiteCabinet", new Vector3(RmX0, u, 5.2f), new Vector3(RmX0 + 0.65f, u + 0.88f, 13.4f), 1f);
+            KitchenFronts(u);
             Add("PipeDark", new Vector3(RmX0, u + 0.88f, 5.15f), new Vector3(RmX0 + 0.7f, u + 0.93f, 13.45f), 1f, false);
             Add("WhiteCabinet", new Vector3(RmX0, u + 1.55f, 5.2f), new Vector3(RmX0 + 0.38f, u + 2.4f, 13.4f), 1f, false);
             Add("CyanStrip", new Vector3(RmX0 + 0.38f, u + 1.52f, 5.2f), new Vector3(RmX0 + 0.41f, u + 1.55f, 13.4f), 1f, false);
@@ -2274,9 +2286,9 @@ var hotelHall = Zone("HotelHall", new Vector3(HX + WallT, MezzY - 0.5f, HtlDoorZ
             Loose(items, "bandage", new Vector3(-33.4f, 0.88f, -22.35f), 0f);
             Loose(items, "bandage", new Vector3(-30.6f, 0.88f, -22.35f), 30f);
             // Armory: protective gear on the upper shelf
-            Loose(items, "helmet_security", new Vector3(4.0f, 1.75f, AZ1 - 0.42f), 180f, "Armory");
-            Loose(items, "vest_armored", new Vector3(5.6f, 1.75f, AZ1 - 0.42f), 180f, "Armory");
-            Loose(items, "gloves_tactical", new Vector3(7.2f, 1.75f, AZ1 - 0.42f), 180f, "Armory");
+            Loose(items, "helmet_security", new Vector3(4.0f, 1.75f, AZ1 - 0.42f), 180f, null, stationProperty: true);
+            Loose(items, "vest_armored", new Vector3(5.6f, 1.75f, AZ1 - 0.42f), 180f, null, stationProperty: true);
+            Loose(items, "gloves_tactical", new Vector3(7.2f, 1.75f, AZ1 - 0.42f), 180f, null, stationProperty: true);
             // Room 1202: a cap, a data pad, a keycard, a mug on the island
             Loose(items, "datapad", new Vector3(33.5f, UpY + 0.95f, 9.0f), 20f);
             Loose(items, "keycard", new Vector3(33.2f, UpY + 0.95f, 10.6f), 75f);
@@ -2284,12 +2296,38 @@ var hotelHall = Zone("HotelHall", new Vector3(HX + WallT, MezzY - 0.5f, HtlDoorZ
             Loose(items, "cap", new Vector3(33.4f, UpY + 0.95f, 11.2f), 140f);
 
 // Containers
-            Locker(items, "Armory locker", "armory_locker", "Armory", new Vector3(3.05f, 0f, -33.35f), 90f);
+            Locker(items, "Armory locker", "armory_locker", "*", new Vector3(3.05f, 0f, -33.35f), 90f);
             Locker(items, "Staff locker", "locker", "*", new Vector3(-35.15f, 0f, -33.95f), 90f);
             foreach (var (x, who) in new[] { (-19.7f, "Mei Lin"), (-11.2f, "Diego Vargas"), (-2.7f, "Noor Rahimi") })
                 Register(items, new Vector3(x, 1.09f, -31.9f), who);
             SupplyCrate(items, new Vector3(8.9f, 0f, 5.2f), 15f);
-            BuildRoomFurniture(items);
+BuildRoomFurniture(items);
+            // Ambient robots: scanner drones in the open air of the atrium, a guide robot on the floor, steam vents to look at
+            var amb = new GameObject("Ambient").transform;
+            amb.SetParent(root, false);
+            var vol = new GameObject("FlightVolume").AddComponent<Alcax.Ambient.FlightVolume>();
+            vol.transform.SetParent(amb, false);
+            vol.transform.position = new Vector3(0f, 8.5f, 3f);
+            vol.size = new Vector3(2f * HX - 3f, 11f, 26f);
+            foreach (var p in new[] { new Vector3(-10f, 9f, 4f), new Vector3(12f, 7f, 8f) })
+            {
+                var d = new GameObject("ScannerDrone");
+                d.transform.SetParent(amb, false);
+                d.transform.position = p;
+                d.AddComponent<Alcax.Ambient.ScannerDrone>();
+            }
+            var bot = new GameObject("InfoBot");
+            bot.transform.SetParent(amb, false);
+            bot.transform.position = new Vector3(-6f, 0f, 6f);
+            bot.AddComponent<UnityEngine.AI.NavMeshAgent>();
+            bot.AddComponent<Alcax.Ambient.InfoBot>();
+            foreach (var p in new[] { new Vector3(-14f, 0f, 2f), new Vector3(15f, 0f, -4f) })
+            {
+                var v = new GameObject("SteamVent");
+                v.transform.SetParent(amb, false);
+                v.transform.position = p;
+                v.AddComponent<Alcax.Ambient.SteamVent>();
+            }
             // Atrium test corner: Guest Services' things on and by the info desk (owned), loose and movable things nearby
             Loose(items, "datapad", new Vector3(1.4f, 1.13f, 10.75f), 160f, "Guest Services");
             Loose(items, "coffee", new Vector3(-1.5f, 1.13f, 10.7f), 0f, "Guest Services");
@@ -2325,14 +2363,24 @@ var hotelHall = Zone("HotelHall", new Vector3(HX + WallT, MezzY - 0.5f, HtlDoorZ
             Alcax.Items.WorldItem.FitCollider(go);
             var wi = go.AddComponent<Alcax.Items.WorldItem>();
             SetRef(wi, "item", def);
-            SetInt(wi, "count", 1);
+            SetInt(wi, "count", id == "credits" ? 240 : 1);
             if (!string.IsNullOrEmpty(owner)) SetString(wi, "owner", owner);
             if (stationProperty) SetBool(wi, "stationProperty", true);
             var rb = go.GetComponent<Rigidbody>();
             rb.mass = Mathf.Max(0.05f, def.mass);
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-            go.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
+go.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
+            // Counter and bed tops are often a thin visual slab above the collision: give the item a pad at the height
+            // it was placed so it rests on what you see (knocked off, it falls as usual)
+            var bounds = go.GetComponent<BoxCollider>().bounds;
+            var pad = new GameObject("Support_" + id);
+            pad.transform.SetParent(parent, false);
+            pad.transform.position = new Vector3(pos.x, pos.y - 0.01f, pos.z);
+            pad.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            var pc = pad.AddComponent<BoxCollider>();
+            pc.size = new Vector3(bounds.size.x + 0.04f, 0.02f, bounds.size.z + 0.04f);
+            pad.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
         }
 
         /// <summary>A container. Owner "*" means station property (nobody's in particular, still theft).</summary>
@@ -2393,29 +2441,17 @@ var hotelHall = Zone("HotelHall", new Vector3(HX + WallT, MezzY - 0.5f, HtlDoorZ
             Loose(parent, "coffee", new Vector3(x0 + 0.35f, u + 1.37f, cz + 0.22f), 0f);
 
             // Kitchen cabinets (on the existing run), the island, the nightstands: containers
-            // Kitchen: the long run reads as separate cabinet units (doors, seams, handles), and each is its own container
-            const int units = 5;
-            float kz0 = 5.2f, kz1 = 13.4f, uw = (kz1 - kz0) / units;
-            for (int i = 0; i < units; i++)
+// Kitchen: one container per cabinet unit (the fronts are built with the room, see KitchenFronts)
             {
-                float a = kz0 + i * uw, b = a + uw, mid = (a + b) * 0.5f;
-                // Lower: two doors under the counter
-                float fx = RmX0 + 0.65f;
-                Add("WhiteCabinet", new Vector3(fx, u + 0.1f, a + 0.02f), new Vector3(fx + 0.02f, u + 0.84f, mid - 0.006f), 1f, false);
-                Add("WhiteCabinet", new Vector3(fx, u + 0.1f, mid + 0.006f), new Vector3(fx + 0.02f, u + 0.84f, b - 0.02f), 1f, false);
-                Add("PipeDark", new Vector3(fx - 0.005f, u + 0.1f, mid - 0.006f), new Vector3(fx + 0.012f, u + 0.84f, mid + 0.006f), 1f, false);   // the gap between the doors
-                Add("PipeDark", new Vector3(fx - 0.005f, u + 0.08f, b - 0.02f), new Vector3(fx + 0.012f, u + 0.86f, b + 0.02f), 1f, false);         // the gap to the next unit
-                Add("MetalLight", new Vector3(fx + 0.02f, u + 0.6f, mid - 0.06f), new Vector3(fx + 0.04f, u + 0.76f, mid - 0.04f), 1f, false);   // handles
-                Add("MetalLight", new Vector3(fx + 0.02f, u + 0.6f, mid + 0.04f), new Vector3(fx + 0.04f, u + 0.76f, mid + 0.06f), 1f, false);
-                FixedContainer(parent, "Cabinet", "cabinet", null, new Vector3(RmX0 + 0.33f, u + 0.44f, mid), new Vector3(0.68f, 0.86f, uw - 0.04f));
-                // Upper: one lift-up door per unit
-                float ux = RmX0 + 0.38f;
-                Add("WhiteCabinet", new Vector3(ux, u + 1.58f, a + 0.02f), new Vector3(ux + 0.02f, u + 2.37f, b - 0.02f), 1f, false);
-                Add("PipeDark", new Vector3(ux - 0.005f, u + 1.56f, b - 0.02f), new Vector3(ux + 0.012f, u + 2.4f, b + 0.02f), 1f, false);
-                Add("MetalLight", new Vector3(ux + 0.02f, u + 1.6f, mid - 0.12f), new Vector3(ux + 0.04f, u + 1.62f, mid + 0.12f), 1f, false);
-                FixedContainer(parent, "Upper cabinet", "cabinet", null, new Vector3(RmX0 + 0.2f, u + 1.98f, mid), new Vector3(0.42f, 0.83f, uw - 0.04f));
+                const int units = 5;
+                float kz0 = 5.2f, kz1 = 13.4f, uw = (kz1 - kz0) / units;
+                for (int i = 0; i < units; i++)
+                {
+                    float mid = kz0 + (i + 0.5f) * uw;
+                    FixedContainer(parent, "Cabinet", "cabinet", null, new Vector3(RmX0 + 0.33f, u + 0.44f, mid), new Vector3(0.68f, 0.86f, uw - 0.06f));
+                    FixedContainer(parent, "Upper cabinet", "cabinet", null, new Vector3(RmX0 + 0.2f, u + 1.98f, mid), new Vector3(0.42f, 0.83f, uw - 0.06f));
+                }
             }
-            Add("PipeDark", new Vector3(RmX0 + 0.6f, u, kz0), new Vector3(RmX0 + 0.66f, u + 0.08f, kz1), 1f, false);   // toe kick
             FixedContainer(parent, "Island drawers", "island", null, new Vector3(33.5f, u + 0.45f, 9.8f), new Vector3(1.42f, 0.9f, 3.62f));
             foreach (float z in new[] { 11.4f, 14.9f })
                 FixedContainer(parent, "Nightstand", "nightstand", null, new Vector3(45.55f, u + 0.25f, z), new Vector3(0.72f, 0.5f, 0.62f));
@@ -2427,6 +2463,17 @@ var hotelHall = Zone("HotelHall", new Vector3(HX + WallT, MezzY - 0.5f, HtlDoorZ
             Sink(parent, new Vector3(42.4f + 0.55f, u + 0.9f, 6.8f));
             FixedContainer(parent, "Vanity", "vanity", null, new Vector3(42.4f + 0.55f, u + 0.42f, 6.8f), new Vector3(0.62f, 0.84f, 1.82f));
 
+// A wall safe (a real door, real things inside) and a locked nightstand: both open with the safe key on the bed
+            BuildSafe(parent, new Vector3(45.55f, u, 9.9f));
+            Loose(parent, "safe_key", new Vector3(44.2f, u + 0.62f, 13.1f), 35f);
+            foreach (var lc in parent.GetComponentsInChildren<Alcax.Items.LootContainer>())
+                if (lc.Title == "Nightstand" && lc.transform.position.z > 14f)
+                {
+                    var lk = lc.gameObject.AddComponent<Alcax.Items.Lock>();
+                    lk.key = "safe_key";
+                    SetString(lc, "title", "Locked nightstand");
+                }
+
             // The bed
             var bed = new GameObject("Bed");
             bed.transform.SetParent(parent, false);
@@ -2437,7 +2484,62 @@ var hotelHall = Zone("HotelHall", new Vector3(HX + WallT, MezzY - 0.5f, HtlDoorZ
             bed.AddComponent<Alcax.Items.Bed>();
         }
 
-static void Sink(Transform parent, Vector3 at)
+/// <summary>A floor safe against the east wall: a hollow steel box with a door on its west face, locked by the safe key.</summary>
+        static void BuildSafe(Transform parent, Vector3 at)
+        {
+            var s = new GameObject("Safe").transform;
+            s.SetParent(parent, false);
+            var steel = mats["PipeDark"];
+            float w = 0.6f, h = 0.62f, d = 0.55f, x0 = at.x - d * 0.5f, x1 = at.x + d * 0.5f, z0 = at.z - w * 0.5f, z1 = at.z + w * 0.5f, y0 = at.y, y1 = at.y + h;
+            Prim(PrimitiveType.Cube, "Back", s, new Vector3(x1 - 0.03f, y0 + h * 0.5f, at.z), new Vector3(0.06f, h, w), Vector3.zero, steel, true);
+            Prim(PrimitiveType.Cube, "SideS", s, new Vector3(at.x, y0 + h * 0.5f, z0 + 0.03f), new Vector3(d, h, 0.06f), Vector3.zero, steel, true);
+            Prim(PrimitiveType.Cube, "SideN", s, new Vector3(at.x, y0 + h * 0.5f, z1 - 0.03f), new Vector3(d, h, 0.06f), Vector3.zero, steel, true);
+            Prim(PrimitiveType.Cube, "Top", s, new Vector3(at.x, y1 - 0.03f, at.z), new Vector3(d, 0.06f, w), Vector3.zero, steel, true);
+            Prim(PrimitiveType.Cube, "Bottom", s, new Vector3(at.x, y0 + 0.04f, at.z), new Vector3(d, 0.08f, w), Vector3.zero, steel, true);
+            var hinge = new GameObject("DoorHinge").transform;
+            hinge.SetParent(s, false);
+            hinge.position = new Vector3(x0, y0 + h * 0.5f, z0);
+            Prim(PrimitiveType.Cube, "Leaf", hinge, new Vector3(-0.025f, 0f, w * 0.5f), new Vector3(0.05f, h, w), Vector3.zero, mats["Metal"], true);
+            Prim(PrimitiveType.Cylinder, "Dial", hinge, new Vector3(-0.06f, 0.08f, w * 0.5f), new Vector3(0.12f, 0.02f, 0.12f), new Vector3(0f, 0f, 90f), mats["MetalLight"]);
+            Prim(PrimitiveType.Cube, "Handle", hinge, new Vector3(-0.06f, -0.1f, w * 0.75f), new Vector3(0.02f, 0.03f, 0.12f), Vector3.zero, mats["OrangeStrip"]);
+            var door = hinge.gameObject.AddComponent<Alcax.Items.HingedDoor>();
+            SetRef(door, "leaf", hinge);
+            SetString(door, "thing", "Safe");
+            SetFloat(door, "openAngle", -110f);   // swings out into the room
+            var lk = hinge.gameObject.AddComponent<Alcax.Items.Lock>();
+            lk.key = "safe_key";
+            // Inside
+            Loose(parent, "credits", new Vector3(at.x, y0 + 0.09f, at.z - 0.12f), 0f);
+            Loose(parent, "datapad", new Vector3(at.x + 0.05f, y0 + 0.09f, at.z + 0.1f), 90f);
+        }
+
+/// <summary>Room 1202's kitchen fronts: five lower units (a drawer over two doors) and five uppers (a lift-up door),
+        /// warm wood on the white carcass with dark reveals, so each unit (each its own container) reads on its own.
+        /// Static geometry: must run before FlushMeshes.</summary>
+        static void KitchenFronts(float u)
+        {
+            const int units = 5;
+            float kz0 = 5.2f, kz1 = 13.4f, uw = (kz1 - kz0) / units;
+            const float gap = 0.03f, proud = 0.025f;
+            float fx = RmX0 + 0.65f, ux = RmX0 + 0.38f;
+            Add("PipeDark", new Vector3(fx - 0.004f, u + 0.08f, kz0), new Vector3(fx + 0.004f, u + 0.86f, kz1), 1f, false);
+            Add("PipeDark", new Vector3(ux - 0.004f, u + 1.56f, kz0), new Vector3(ux + 0.004f, u + 2.4f, kz1), 1f, false);
+            for (int i = 0; i < units; i++)
+            {
+                float a0 = kz0 + i * uw + gap * 0.5f, b0 = kz0 + (i + 1) * uw - gap * 0.5f, mid = (a0 + b0) * 0.5f;
+                Add("Wood", new Vector3(fx, u + 0.70f, a0), new Vector3(fx + proud, u + 0.84f, b0), 1f, false);
+                Add("Wood", new Vector3(fx, u + 0.10f, a0), new Vector3(fx + proud, u + 0.67f, mid - gap * 0.5f), 1f, false);
+                Add("Wood", new Vector3(fx, u + 0.10f, mid + gap * 0.5f), new Vector3(fx + proud, u + 0.67f, b0), 1f, false);
+                Add("MetalLight", new Vector3(fx + proud, u + 0.755f, mid - 0.16f), new Vector3(fx + proud + 0.02f, u + 0.775f, mid + 0.16f), 1f, false);
+                Add("MetalLight", new Vector3(fx + proud, u + 0.38f, mid - 0.07f), new Vector3(fx + proud + 0.02f, u + 0.6f, mid - 0.05f), 1f, false);
+                Add("MetalLight", new Vector3(fx + proud, u + 0.38f, mid + 0.05f), new Vector3(fx + proud + 0.02f, u + 0.6f, mid + 0.07f), 1f, false);
+                Add("Wood", new Vector3(ux, u + 1.58f, a0), new Vector3(ux + proud, u + 2.38f, b0), 1f, false);
+                Add("MetalLight", new Vector3(ux + proud, u + 1.61f, mid - 0.22f), new Vector3(ux + proud + 0.02f, u + 1.63f, mid + 0.22f), 1f, false);
+            }
+            Add("PipeDark", new Vector3(RmX0 + 0.58f, u, kz0), new Vector3(RmX0 + 0.64f, u + 0.08f, kz1), 1f, false);
+        }
+
+        static void Sink(Transform parent, Vector3 at)
         {
             var go = new GameObject("Sink");
             go.transform.SetParent(parent, false);

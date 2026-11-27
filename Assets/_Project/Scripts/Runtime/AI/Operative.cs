@@ -1467,6 +1467,7 @@ void CheckSeenByPlayer(ICombatTarget p)
                 if (dashing && (Stamina > 0.45f || Perception.CanSee || Pressure > 0.3f)) baseSpeed = Mathf.Max(baseSpeed, archetype.sprintSpeed);
                 if (Winded) baseSpeed = Mathf.Min(baseSpeed, archetype.runSpeed * 0.8f);   // blown: no sprinting until recovered
             }
+            if (duty == Duty.Confront) baseSpeed = moveSpeed;   // catching up to a thief: no stamina limits
             agent.speed = baseSpeed * moveSpeedScale * dirFactor * stagger * crouchSlow * limp;
             TickStamina(dt, v.magnitude);
             TrackReversal(v);
@@ -2809,7 +2810,14 @@ case Duty.Confront:
                     {
                         var to = (confrontTarget.position - transform.position).Flat();
                         float d = to.magnitude;
-                        if (d > 2.2f) { MoveTo(confrontTarget.position, Mathf.Lerp(archetype.walkSpeed, archetype.runSpeed, 0.45f)); }
+                        if (d > 2.2f)
+                        {
+                            // Faster than you: 1.2x your sprint speed, no stamina limit; easing to a walk over the last few meters
+                            var pc = PlayerTarget.Instance != null ? PlayerTarget.Instance.GetComponent<Alcax.Player.PlayerController>() : null;
+                            float top = (pc != null ? pc.SprintSpeed : 7f) * 1.2f;
+                            float chase = d > 5f ? top : Mathf.Lerp(archetype.walkSpeed * 1.3f, top, (d - 2.2f) / 2.8f);
+                            MoveTo(confrontTarget.position, chase);
+                        }
                         else
                         {
                             Stop();

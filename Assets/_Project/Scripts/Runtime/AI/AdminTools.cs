@@ -144,6 +144,15 @@ void OnSceneLoaded(Scene s, LoadSceneMode mode)
             return op;
         }
 
+void SpawnAmbient(bool drone)
+        {
+            if (!AimSpawn(out var spot)) { Toast("NO WALKABLE GROUND WHERE YOU ARE LOOKING"); return; }
+            var go = new GameObject(drone ? "ScannerDrone" : "InfoBot");
+            if (drone) { go.transform.position = spot + Vector3.up * 3f; go.AddComponent<Alcax.Ambient.ScannerDrone>(); }
+            else { go.transform.position = spot; go.AddComponent<UnityEngine.AI.NavMeshAgent>(); go.AddComponent<Alcax.Ambient.InfoBot>(); }
+            Toast(drone ? "SCANNER DRONE" : "INFO ROBOT");
+        }
+
         void AlertAll()
         {
             int n = 0;
@@ -376,6 +385,8 @@ void OnGUI()
                     if (e != null && e.archetype != null && Button(x, w, e.archetype.displayName, shift ? "aware" : null)) SpawnSingle(e, shift);
             }
             else GUI.Label(new Rect(x, cy, w, 20), "No spawn catalog (build the AI Playground once).", noteStyle);
+            if (Button(x, w, "Scanner drone", "ambient")) SpawnAmbient(true);
+            if (Button(x, w, "Info robot", "ambient")) SpawnAmbient(false);
             }
 
             // --- AI ---

@@ -2,6 +2,60 @@
 
 Newest entries first.
 
+## 2026-11-26: Fixed: the kitchen fronts never appeared
+
+- The cabinet fronts were added in the furniture step, which runs after `FlushMeshes` merges the static geometry, so they were silently dropped. They are built with the hotel room now (`KitchenFronts`), and the furniture step only adds the containers.
+- Guard: static geometry added after the flush now logs an error. A full rebuild logged none, so nothing else was being lost.
+
+## 2026-11-26: Items rest on what you see; a real kitchen
+
+- Fixed: placed items sank 4 to 5 cm into bed and counter tops, because those tops are thin visual slabs above the collision. Each placed item now gets an invisible support pad at its placed height (knocked off, it falls as usual). Settled heights are within about 2 cm of placed.
+- The room 1202 kitchen: five lower units (a drawer over two doors) and five uppers (a lift-up door), with warm wood fronts on the white carcass, dark reveals between every front and unit, and bar handles. Each unit is still its own container.
+
+## 2026-11-26: Conversations frame the speaker
+
+- `DialogueCamera`: when a conversation opens, the view turns to whoever you're talking to (even from behind) and zooms so their head and shoulders sit in the upper third, above the dialogue panel. When it closes, the zoom eases back and you keep facing them. `WeaponHolder` blends the dialogue field of view into its own.
+- Tested: facing away (172 degrees) to facing Ines (5 degrees) in 0.4 s; FOV 72 to 26 with her face at 69% of the screen height; back to 72 after closing.
+
+## 2026-11-26: Scanner drones report stolen goods
+
+- A drone scanning you finds stolen goods even in the backpack (the beam turns red at 40%) and reports them when the scan completes. Running off or breaking sight first loses it. Dropping stolen goods in view, or mid-scan, is reported too.
+- Tested: carrying a stolen keycard and staying put (red, reported 25), running 22 m away mid-scan (not reported), clean (not flagged), and dropping it mid-scan (still reported 25).
+
+## 2026-11-26: Click to consume, locks and keys, exploding robots
+
+- Consumables in hand are used with one left click (there was a hold-to-use timer before).
+- `Lock`: any interactable can require an item anywhere in the inventory. The room 1202 safe (a hinged door with real items inside) and a locked nightstand (a container) both take the safe key from the bed.
+- Robots explode on death (`Ambient/Explosion`): a flash, a fireball, smoke, sparks, flying debris, a shake, damage with falloff (the guide robot: 4 m, 55; a drone: 2.5 m, 25), and a push on loose objects. What's left is a scorched wreck with parts torn off that falls over and can be searched (circuit boards, credits, sometimes a keycard) or dragged.
+- New items: circuit board (sells for 18) and safe key.
+- Tested: one click used a bandage (+20 health); without the key the safe and nightstand stayed locked, with it both opened; the guide robot's blast took the player from 100 to 78 at 2.5 m, and its wreck held 20 credits, 2 circuit boards, and a keycard; a drone fell 4.5 m and left a lootable wreck.
+
+## 2026-11-26: Ambient robots, and a one-bake rebuild
+
+- **Scanner drones** (`Ambient/ScannerDrone`, an original design): they fly freely inside a `FlightVolume` (the atrium air), with smooth acceleration, banking, feeling ahead for walls and glass, and an uneven hover drift even when idle. They pick something to look at (people, you, props, containers, bodies, the new steam vents), fly beside it, and scan it for 3.5 to 5.5 s with a fan of light sweeping up and down. If the target walks off, they follow and keep scanning. Thruster wash under each ring. They can be shot down (they fall and can be dragged).
+- **Guide Unit 7** (`Ambient/InfoBot`): a tall hovering information robot on a NavMeshAgent. It drifts around the atrium floor, rolls up to people with unhelpful speech bubbles, apologizes to whatever it bumps into, and has a dialogue of technically correct answers. Air puffs out under its skirt. It doesn't witness theft (`Npc.witness`). It can be knocked over.
+- Two steam vents in the atrium. The admin Spawn section can place either robot at the crosshair.
+- The Atrium rebuild bakes once now (Day; Dusk and Night reuse it with a different sun, sky, and exposure). **Alcax > Bake Atrium Lighting (All Times)** does the three-bake version. The rebuild took 74 s.
+- Tested: drones flying and choosing targets (a guard, a steam vent), a scan that kept going and followed a robot walking 3 m, the robot drifting, greeting, and showing its talk prompt. No errors.
+
+## 2026-11-26: Stairs and jumping
+
+- Fixed: the top of the grand stair met a 0.45 m lip. The mezzanine fascia ran across the stair opening, 0.1 m above the floor and over the top steps, higher than the 0.4 m step offset. The fascia now stops at the opening.
+- Jumping: coyote time (0.15 s after leaving the ground), a jump buffer (0.12 s before landing), and ground snapping when walking down steps or slopes (a sphere cast within the step offset), so going down stairs no longer counts as airborne.
+- Tested: walked up the whole stair onto the mezzanine (2.9 s), then sprinted down it grounded on 100% of frames (jumpable on all of them).
+
+## 2026-11-26: Stolen goods in sight, and random stops
+
+- Unseen theft still never sends anyone. Wearing or holding stolen things in front of someone within 8 m (1.5 s) reports them. Consuming stolen goods is safe.
+- Random stops by calm guards who can see you (likelier when you carry stolen goods, with a 3-minute cooldown): clean, they wave you on; otherwise the fine.
+- Tested: an unseen theft in the restrooms (no fine), a stolen helmet worn at the info desk (Ines reported it; fine 190), and a clean stop (waved on).
+
+## 2026-11-26: Stamina x2, a stealable armory, wheel, fine chases
+
+- Max stamina 200 (from 100). The mouse wheel steps through every hotbar slot. The whole armory is station property.
+- A guard coming to fine you runs at 1.2x your sprint speed with no stamina limit (34 m in about 3 s in a test). Only a guard with a complete path to you is sent; when nobody can reach you, the fine waits until you're reachable (tested: a theft upstairs, then a guard came 3 s after coming down).
+- Esc closing a menu re-takes the cursor for a few frames (the Editor frees it on Esc).
+
 ## 2026-11-26: Fridge door, cabinet units, cursor lock
 
 - The fridge door swings out into the room (the angle sign was reversed).

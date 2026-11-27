@@ -52,6 +52,10 @@ namespace Alcax.Items
                 new Line("coffee", 0.6f, 1, 2), new Line("ration", 0.6f, 1, 3), new Line("noodles", 0.4f), new Line("wrap", 0.4f) } },
             ["cabinet"] = new Table { creditsMin = 0, creditsMax = 0, maxItems = 4, lines = new[] {
                 new Line("ration", 0.45f, 1, 3), new Line("water", 0.5f, 1, 2), new Line("mug", 0.5f), new Line("coffee", 0.2f), new Line("bandage", 0.15f) } },
+            ["robot"] = new Table { creditsMin = 0, creditsMax = 25, maxItems = 4, lines = new[] {
+                new Line("circuit", 0.85f, 1, 3), new Line("charge", 0.25f), new Line("keycard", 0.15f), new Line("datapad", 0.1f) } },
+            ["safe"] = new Table { creditsMin = 150, creditsMax = 300, maxItems = 3, lines = new[] {
+                new Line("datapad", 0.7f), new Line("keycard", 0.5f), new Line("medkit", 0.4f) } },
             ["vanity"] = new Table { creditsMin = 0, creditsMax = 0, maxItems = 3, lines = new[] {
                 new Line("bandage", 0.6f, 1, 2), new Line("water", 0.2f), new Line("keycard", 0.1f) } },
             ["nightstand"] = new Table { creditsMin = 0, creditsMax = 30, maxItems = 3, lines = new[] {

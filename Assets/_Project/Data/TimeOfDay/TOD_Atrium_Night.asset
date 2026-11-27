@@ -28,48 +28,8 @@ MonoBehaviour:
   fogDensity: 0.0016
   postExposure: 0.45
   shafts: 0
-  lightmapColor:
-  - {fileID: 2800000, guid: 5a1a1f3f29de2ba43b3f84d3f93eeb4d, type: 3}
-  lightmapDir:
-  - {fileID: 2800000, guid: 641ba282d3435244bae30f5e7c14c937, type: 3}
-  probes: {fileID: 25800000, guid: c6ccecccc413cd64bb6b5946f949be75, type: 2}
-  reflections:
-  - {fileID: 8900000, guid: 9e33beee815c53a4aa3e3dd8d1fb149e, type: 3}
-  - {fileID: 8900000, guid: 11291c8e7a7c5b945819b515fc08ce54, type: 3}
-  - {fileID: 8900000, guid: 9a306de93fe903e46acae68e1a8ec214, type: 3}
-  - {fileID: 8900000, guid: 5247fb132b2a98e44af54ede613373bd, type: 3}
-  - {fileID: 8900000, guid: 997ee79715d0f874f924118493bb41df, type: 3}
-  - {fileID: 8900000, guid: db5f4cd9e49fa0049a273085221d0d9b, type: 3}
-  - {fileID: 8900000, guid: 044efeece93f08044a6512741d68225d, type: 3}
-  - {fileID: 8900000, guid: 072d65b20b7147f48804418642517ee7, type: 3}
-  - {fileID: 8900000, guid: 45f011f35f28c264098ec6c3eddbc775, type: 3}
-  - {fileID: 8900000, guid: 6088342ec29fad24899618e6d2d409d0, type: 3}
-  - {fileID: 8900000, guid: 450508a42217aab47a0e3bf7c1df7e38, type: 3}
-  ambientProbe:
-  - 0.00026573468
-  - 0.00008380852
-  - 0.00021374048
-  - 0.000101560836
-  - 0.0000742593
-  - 0.00016214159
-  - 0.000034266086
-  - 0.0001235311
-  - 0.000012520686
-  - 0.0002466662
-  - 0.0000775783
-  - 0.00017267143
-  - 0.000074103256
-  - 0.00005786132
-  - 0.00012128635
-  - 0.000029961051
-  - 0.000087722365
-  - 0.000015164606
-  - 0.00031983963
-  - 0.00010322391
-  - 0.00015705104
-  - 0.000036953126
-  - 0.000040700375
-  - 0.00007073022
-  - 0.00003683911
-  - 0.00003794041
-  - 0.000029046561
+  lightmapColor: []
+  lightmapDir: []
+  probes: {fileID: 0}
+  reflections: []
+  ambientProbe: []

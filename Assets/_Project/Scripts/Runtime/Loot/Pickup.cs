@@ -29,6 +29,12 @@ namespace Alcax.Loot
         [SerializeField] Transform visual;
         [SerializeField] Light glow;
         [SerializeField] float autoRadius = 1.3f;
+        [Tooltip("Station property: still a crime to take (anyone who sees it reports it).")]
+        public bool stationProperty;
+        public string owner;
+
+        public bool Owned => stationProperty || !string.IsNullOrEmpty(owner);
+        string OwnerLabel => !string.IsNullOrEmpty(owner) ? owner + "'s" : "Station property";
 
         Vector3 visualBase;
         float glowBase;
@@ -82,29 +88,36 @@ namespace Alcax.Loot
             }
         }
 
+/// <summary>Into the inventory as a stack (marked stolen, and reported if seen, when it isn't yours).</summary>
+        bool GiveStack(GameObject collector, ItemDefinition def, int n)
+        {
+            var inv = collector.GetComponent<PlayerInventory>();
+            if (inv == null || def == null) return false;
+            var st = new ItemStack(def, n);
+            if (Owned) Theft.Took(st, OwnerLabel);
+            return inv.AddStack(st);
+        }
+
         public bool Collect(GameObject collector)
         {
             if (collected) return false;
             string msg = null;
             switch (kind)
             {
-                case PickupKind.Weapon:
-                    var holder = collector.GetComponent<WeaponHolder>();
-                    if (holder == null || weapon == null) return false;
-                    msg = holder.Give(weapon);
-                    if (msg == null) return false;
-                    if (!msg.StartsWith("+")) msg = "PICKED UP " + msg;
+case PickupKind.Weapon:
+                    if (weapon == null || !GiveStack(collector, ItemDatabase.ForWeapon(weapon), 1)) return false;
+                    // Its starting ammo comes along (stolen with it, if it was)
+                    if (weapon.ammoType != AmmoType.None && weapon.startingReserve > 0)
+                        collector.GetComponent<PlayerInventory>()?.AddStack(new ItemStack(ItemDatabase.ForAmmo(weapon.ammoType), weapon.startingReserve, -1, Owned));
+                    msg = weapon.displayName.ToUpperInvariant();
                     break;
                 case PickupKind.Ammo:
-                    var h = collector.GetComponent<WeaponHolder>();
-                    if (h == null || !h.AddAmmo(ammoType, amount)) return false;
+                    if (!GiveStack(collector, ItemDatabase.ForAmmo(ammoType), amount)) return false;
                     msg = $"+{amount} {WeaponHolder.AmmoName(ammoType)}";
                     break;
                 case PickupKind.Medkit:
-                    var inv = collector.GetComponent<PlayerInventory>();
-                    var kit = ItemDatabase.Get("medkit");
-                    if (inv == null || kit == null || inv.Add(kit, 1) > 0) return false;
-                    msg = "PICKED UP MEDKIT";
+                    if (!GiveStack(collector, ItemDatabase.Get("medkit"), 1)) return false;
+                    msg = "MEDKIT";
                     break;
             }
 

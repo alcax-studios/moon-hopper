@@ -19,6 +19,8 @@ namespace Alcax.Dialogue
         public DialogueTree dialogue;
         [Tooltip("Off: this only provides the conversation (name, dialogue, talking state); something else animates the body (a guard's combat rig).")]
         public bool drivesBody = true;
+        [Tooltip("Notices and reports theft (robots don't).")]
+        public bool witness = true;
         [SerializeField] float lookRadius = 7f;
         [SerializeField] float stepLength = 0.65f;
 
@@ -65,10 +67,11 @@ namespace Alcax.Dialogue
             bodyBase = body.localPosition;
             rigBase = rig.localPosition;
             headBase = head.localRotation;
-            jawBase = jaw.localRotation;
-            armLBase = armL.localRotation;
-            armRBase = armR.localRotation;
-            elbowL = armL.Find("Elbow"); elbowR = armR.Find("Elbow");
+            jawBase = jaw != null ? jaw.localRotation : Quaternion.identity;
+            // A body without arms (a robot) is fine: only humanoids animate them
+            armLBase = armL != null ? armL.localRotation : Quaternion.identity;
+            armRBase = armR != null ? armR.localRotation : Quaternion.identity;
+            elbowL = armL != null ? armL.Find("Elbow") : null; elbowR = armR != null ? armR.Find("Elbow") : null;
             if (elbowL != null) elbowLBase = elbowL.localRotation;
             if (elbowR != null) elbowRBase = elbowR.localRotation;
             seed = Random.value * 10f;

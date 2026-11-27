@@ -15,14 +15,37 @@ namespace Alcax.EditorTools
     /// </summary>
     public static class AtriumLighting
     {
-        static readonly TimePreset[] Order = { TimePreset.Night, TimePreset.Dusk, TimePreset.Day };
+        static readonly TimePreset[] AllOrder = { TimePreset.Night, TimePreset.Dusk, TimePreset.Day };
+        static readonly TimePreset[] QuickOrder = { TimePreset.Day };
+        static TimePreset[] Order = AllOrder;
+        static bool capture;
         static int step = -1;
         public static bool Running => step >= 0;
 
+/// <summary>One bake (Day). Dusk and Night reuse it and only change the sun, sky, fog, and exposure; the
+        /// per-time copies are removed so nothing stale is swapped in.</summary>
+        public static void BakeQuick()
+        {
+            if (Lightmapping.isRunning) { Debug.LogWarning("[AtriumLighting] a bake is already running"); return; }
+            var set = Object.FindAnyObjectByType<TimeOfDaySet>();
+            if (set != null && set.profiles != null)
+                foreach (var p in set.profiles)
+                {
+                    if (p == null) continue;
+                    p.lightmapColor = null; p.lightmapDir = null; p.probes = null; p.reflections = null; p.ambientProbe = null;
+                    EditorUtility.SetDirty(p);
+                }
+            if (AssetDatabase.IsValidFolder($"{Root}/Lighting/Atrium")) AssetDatabase.DeleteAsset($"{Root}/Lighting/Atrium");
+            Order = QuickOrder; capture = false; step = 0;
+            Next();
+        }
+
+        /// <summary>One bake per time of day (a few minutes): Night and Dusk get their own lightmaps.</summary>
+        [MenuItem("Alcax/Bake Atrium Lighting (All Times)")]
         public static void BakeAll()
         {
             if (Lightmapping.isRunning) { Debug.LogWarning("[AtriumLighting] a bake is already running"); return; }
-            step = 0;
+            Order = AllOrder; capture = true; step = 0;
             Next();
         }
 
@@ -45,7 +68,7 @@ namespace Alcax.EditorTools
             Lightmapping.bakeCompleted -= Done;
             var set = Object.FindAnyObjectByType<TimeOfDaySet>();
             var prof = set != null ? set.Get(Order[step]) : null;
-            if (prof != null) Capture(set, prof);
+            if (prof != null && capture) Capture(set, prof);
             step++;
             EditorApplication.delayCall += Next;
         }
@@ -55,7 +78,7 @@ namespace Alcax.EditorTools
             step = -1;
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
             AssetDatabase.SaveAssets();
-            Debug.Log("[AtriumLighting] Day, Dusk, and Night baked; scene saved on Day.");
+            Debug.Log(capture ? "[AtriumLighting] Day, Dusk, and Night baked; scene saved on Day." : "[AtriumLighting] Day baked (Dusk and Night reuse it); scene saved.");
         }
 
         /// <summary>Set the scene's sun, sky, and environment to a preset (what the bake sees).</summary>

@@ -139,15 +139,8 @@ namespace Alcax.Items
             SelectionChanged?.Invoke();
         }
 
-        /// <summary>Next or previous non-empty hotbar slot (wrapping). Stays put when the hotbar is empty.</summary>
-        void Cycle(int dir)
-        {
-            for (int k = 1; k <= HotbarSize; k++)
-            {
-                int i = ((Selected + dir * k) % HotbarSize + HotbarSize) % HotbarSize;
-                if (hotbar[i] != null && !hotbar[i].IsEmpty) { Select(i); return; }
-            }
-        }
+/// <summary>The next or previous hotbar slot (wrapping); an empty slot is bare hands.</summary>
+        void Cycle(int dir) => Select(((Selected + dir) % HotbarSize + HotbarSize) % HotbarSize);
 
         /// <summary>Move a stack: merge into the same item, otherwise swap (when both sides accept the other).</summary>
         public bool Move(SlotRef from, SlotRef to, int amount = -1)
@@ -340,6 +333,12 @@ namespace Alcax.Items
             ItemStack dropped;
             if (amount > 0 && amount < s.count) { s.count -= amount; dropped = new ItemStack(s.def, amount, -1, s.stolen); }
             else { dropped = s; Put(r, null); }
+if (dropped.stolen)
+            {
+                bool drone = Alcax.Ambient.ScannerDrone.AnyScanningPlayer;
+                foreach (var d in Alcax.Ambient.ScannerDrone.All) d.SawDrop(dropped.Value);
+                if (!drone && Theft.Watched(out var who)) Alcax.AI.StationSecurity.Instance?.ReportTheft(dropped.Value, who);
+            }
             var cam = Camera.main != null ? Camera.main.transform : transform;
             var fwd = cam.forward; fwd.y = Mathf.Min(fwd.y, 0.3f);
             WorldItem.Spawn(dropped, cam.position + fwd.normalized * 0.7f - Vector3.up * 0.25f, Quaternion.Euler(0f, cam.eulerAngles.y, 0f), fwd.normalized * 2f);

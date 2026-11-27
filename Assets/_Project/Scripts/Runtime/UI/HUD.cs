@@ -423,7 +423,7 @@ void UpdateVitals()
             if (vitals == null) vitals = PlayerVitals.Instance != null ? PlayerVitals.Instance : player.GetComponent<PlayerVitals>();
             if (vitals == null) return;
             float dt = Time.unscaledDeltaTime;
-            float target = Mathf.Clamp01(vitals.Stamina / Mathf.Max(100f, vitals.MaxStamina));
+            float target = Mathf.Clamp01(vitals.Stamina / Mathf.Max(PlayerVitals.BaseStamina, vitals.MaxStamina));
             shownStamina = Mathf.Lerp(shownStamina, target, 1f - Mathf.Exp(-12f * dt));
             bool spending = lastStamina >= 0f && vitals.Stamina < lastStamina - 0.01f;
             bool recovering = lastStamina >= 0f && vitals.Stamina > lastStamina + 0.01f;

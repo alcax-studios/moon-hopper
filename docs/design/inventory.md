@@ -19,7 +19,7 @@ You start wearing the work jacket, cargo pants, and boots, and carrying 2 bandag
 
 ## Inventory
 
-- **Backpack:** 6 x 5 slots. **Hotbar:** 8 slots, keys 1 to 8 and the mouse wheel; the selected slot is in your hands (fists, hidden, when it isn't a weapon). **Body:** head, chest, pants, shoes, gloves.
+- **Backpack:** 6 x 5 slots. **Hotbar:** 8 slots, keys 1 to 8 and the mouse wheel (it steps through every slot; an empty one is bare hands); the selected slot is in your hands (fists, hidden, when it isn't a weapon). **Body:** head, chest, pants, shoes, gloves.
 - New weapons go to the hotbar, and into your hands when you aren't holding a weapon. A wearable goes straight onto an empty body slot. Everything else goes to the backpack.
 - Stacks merge first. Moving onto a different item swaps (when both slots accept the other).
 
@@ -63,14 +63,20 @@ The world keeps running (`GameState.Menu`: the cursor frees up and the player st
 - **Stealable** things belong to someone or are **station property** (`stationProperty`: nobody's in particular, still a crime). Either way, anyone who sees you take one reports it. Containers open normally ("OPEN REGISTER"); what's inside shows a red STEAL tag, and Take All becomes Steal All. World items show a red "[E] STEAL ...". The UI stays plain: no owner names, no watcher hints, no explanatory captions.
 - Station property in the Atrium: the staff locker and the first-aid kit on the info desk.
 - Stealable items, by owner: In the Atrium: the coffee, rations, and noodles on the stall counters (their stall's), the armory shelf gear, the armory and staff lockers, the registers, and Guest Services' data pad, coffee, and lost and found by the info desk.
-- **Unseen**, a stolen item is just marked STOLEN. Keep it, use it, eat it.
-- **Seen** by anyone within 14 m who faces you with a clear view: the nearest calm guard walks up and asks for a fine (what you took, plus 50). Pay it (the stolen goods are confiscated; if you can't afford it, you hand over all your credits), or refuse and fight. Walking away after being asked, or stalling for a minute, counts as refusing.
+- **Unseen**, a stolen item is just marked STOLEN, and nobody comes. Carrying it in the backpack is safe, and eating or drinking it is the safe way to use it.
+- **Showing it** is not: wearing a stolen item, or holding a stolen weapon or tool in your hand, gets you reported once anyone within 8 m has had a clear look for 1.5 s (each item once).
+- **Scanner drones see through the backpack.** A drone scanning you finds stolen goods 40% of the way in: the beam and its eye turn red, it beeps and keeps up with you. When the scan completes, it reports you ("REPORTED"), and a guard comes to fine you. Breaking its line of sight for 1.2 s, or getting 14 m away, before the scan ends loses it, with no report. Shooting it down works too.
+- **Dropping stolen goods** doesn't hide them: dropped where anyone sees, or while a drone scans you, it's reported.
+- **Random stops:** every 20 s a calm guard who can see you within 18 m may come over for a check (35% when you carry stolen goods, 6% when you don't; then 3 minutes off). Clean: "You're clear. Carry on." Not clean: the fine for everything stolen on you.
+- **Seen** by anyone within 14 m who faces you with a clear view: the nearest calm guard who can reach you runs over (1.2x your sprint speed, no stamina limit) and asks for a fine (what you took, plus 50). Pay it (the stolen goods are confiscated; if you can't afford it, you hand over all your credits), or refuse and fight. Walking away after being asked counts as refusing. If no guard can reach you (room 1202 is upstairs, behind the elevator), the fine waits, and a guard comes once you're reachable.
+- The armory is station property: the racks (guns, ammo, medkits), the shelf gear, and the armory locker. Bayo sells the same things legally.
 - **Selling stolen goods** to these traders is an instant crime: security turns on you, and the quartermaster arms up.
 
 ## Survival (`PlayerVitals`)
 
-- **Stamina:** sprinting drains 16/s, and a jump costs 10. It recovers 16/s after a 1 s pause (faster when standing still or crouched). Running dry locks out sprinting until it's back to 30%. It's the thin bar under health.
+- **Stamina:** a pool of 200 (120 when tired, +40 when Well rested). Sprinting drains 16/s, and a jump costs 10. It recovers 16/s after a 1 s pause (faster when standing still or crouched). Running dry locks out sprinting until it's back to 30% of max. It's the thin bar under health.
 - **Needs:** food, water, and energy drain to empty over about 40, 25, and 60 minutes (faster while sprinting). Below 25 each one slows stamina recovery, and low energy cuts max stamina to 60. At zero food or water you lose 1 health every 2 s (down to 5). Three small bars under the stamina bar show them, with a warning (HUNGRY, THIRSTY, TIRED...).
+- **In hand, a left click uses an aid, food, or drink item at once** (no hold). From the inventory, Use does the same.
 - **Consumables:** ration (food 30), noodles (food 50, water 10), wrap (food 45), water bottle (water 45), coffee (water 15, energy 20, Caffeinated), Charge (water 15, energy 15, Energized). Sinks (the room 1202 kitchen and bathroom) give water 25, free.
 - **Effects:**
 
@@ -84,10 +90,15 @@ The world keeps running (`GameState.Menu`: the cursor frees up and the player st
 - **Sleep:** E on the room 1202 bed and pick one of the next two times of day (from Day: Dusk or Night). The screen fades, the time changes, and you wake rested: energy 100, a bit hungrier and thirstier, +30 health, debuffs cleared, Well rested.
 - **Admin (Player section):** Infinite stamina, Needs don't drain, Fill needs and stamina.
 
+## Locks (`Lock`)
+
+- Any interactable can need an item: a key, a keycard, a tool. With the item anywhere on you (backpack, hotbar, or in hand), E unlocks it for good and goes ahead; without it, "LOCKED". The prompt shows LOCKED until it's open. `consumeKey` makes one-time keys.
+- Room 1202: the floor safe (a real door with credits and a data pad inside) and the north nightstand (a container) both open with the **safe key**, which lies on the bed.
+
 ## Furniture
 
 - The room 1202 fridge has a real door (E opens or closes it). The items inside are physical (water, Charge, noodles, a wrap, coffee): you pick them up by hand, and only while it's open.
-- Kitchen cabinets (5 lower and 5 upper units, each with its own doors and handles), the island drawers, the nightstands, the bathroom vanity, and the armory's medical cabinet (station property) are containers.
+- Kitchen cabinets (5 lower units with a drawer over two doors, 5 uppers with a lift-up door; wood fronts with dark reveals so each unit reads on its own), the island drawers, the nightstands, the bathroom vanity, and the armory's medical cabinet (station property) are containers.
 
 ## Time of day
 

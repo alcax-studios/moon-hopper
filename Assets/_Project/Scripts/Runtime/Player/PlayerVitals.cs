@@ -19,17 +19,18 @@ namespace Alcax.Player
         public static PlayerVitals Instance { get; private set; }
 
         // Stamina
-        const float SprintDrain = 16f, JumpCost = 10f, Regen = 16f, RegenDelay = 1.0f, ExhaustedUntil = 30f;
+        const float SprintDrain = 16f, JumpCost = 10f, Regen = 16f, RegenDelay = 1.0f, ExhaustedUntil = 0.3f;   // fraction of max
         // Needs drain to zero over: hunger 40 min, thirst 25 min, energy 60 min
         const float HungerRate = 100f / (40f * 60f), ThirstRate = 100f / (25f * 60f), EnergyRate = 100f / (60f * 60f);
         public const float Low = 25f;
 
-        public float Stamina { get; private set; } = 100f;
+        public const float BaseStamina = 200f;
+        public float Stamina { get; private set; } = BaseStamina;
         public float Hunger { get; private set; } = 85f;
         public float Thirst { get; private set; } = 80f;
         public float Energy { get; private set; } = 90f;
         public bool Exhausted { get; private set; }
-        public float MaxStamina => (Energy < Low ? 60f : 100f) + (Has("well_rested") ? 20f : 0f);
+        public float MaxStamina => BaseStamina * (Energy < Low ? 0.6f : 1f) + (Has("well_rested") ? BaseStamina * 0.2f : 0f);
         public bool CanSprint => !Exhausted;
 
         public class Effect
@@ -120,7 +121,7 @@ namespace Alcax.Player
             else if (Time.time - lastDrain > RegenDelay)
                 Stamina = Mathf.Min(MaxStamina, Stamina + Regen * RegenFactor() * dt);
             if (Stamina > MaxStamina) Stamina = MaxStamina;
-            if (Exhausted && Stamina >= ExhaustedUntil) Exhausted = false;
+            if (Exhausted && Stamina >= ExhaustedUntil * MaxStamina) Exhausted = false;
         }
 
         float RegenFactor()

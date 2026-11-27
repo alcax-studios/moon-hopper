@@ -155,6 +155,7 @@ public bool Wanted { get; private set; }
         float fineSince, fineAskedAt = -10f;
         bool fineAsked;
         DialogueTree savedGuardTree;
+        bool searching;   // the current visit is a random stop, not a reported theft
 
         public bool FinePending => fineGuard != null;
         public int FineAmount => fineValue + FineFee;
@@ -165,24 +166,67 @@ public bool Wanted { get; private set; }
             var p = PlayerTarget.Instance;
             if (p == null) return;
             fineValue += value;
-            if (fineGuard != null && !fineGuard.IsDead) { Toast($"FINE: {FineAmount} CR"); return; }
+if (fineGuard != null && !fineGuard.IsDead) { Toast($"FINE: {FineAmount} CR"); return; }
+            Toast("SEEN STEALING");
+            bool anyGuard = false;
+            foreach (var g in AllUnits()) if (!g.HostileToPlayer && g.OnDuty) { anyGuard = true; break; }
+            if (!anyGuard) { Crime(p.Position, "THEFT"); fineValue = 0; return; }
+            // Somebody who can actually get to you; if nobody can right now, the fine waits until you're reachable
+            SendFineGuard();
+        }
+
+        float nextFineTry;
+        static UnityEngine.AI.NavMeshPath finePath;
+
+        bool SendFineGuard()
+        {
+            var p = PlayerTarget.Instance;
+            if (p == null) return false;
+            if (!NavMesh.SamplePosition(p.Position, out var at, 2f, NavMesh.AllAreas)) return false;
+            finePath ??= new NavMeshPath();
             Operative best = null; float bd = float.MaxValue;
             foreach (var g in AllUnits())
             {
                 if (g.HostileToPlayer || !g.OnDuty || g.GetComponent<Npc>() == null) continue;
+                if (!NavMesh.CalculatePath(g.transform.position, at.position, NavMesh.AllAreas, finePath) || finePath.status != NavMeshPathStatus.PathComplete) continue;
                 float d = Vector3.Distance(g.transform.position, p.Position);
                 if (d < bd) { bd = d; best = g; }
             }
-            if (best == null || !best.Confront(p.transform, OnFineGuardArrived)) { Crime(p.Position, "THEFT"); fineValue = 0; return; }
+            if (best == null || !best.Confront(p.transform, OnFineGuardArrived)) return false;
             fineGuard = best;
             fineSince = Time.time;
             fineAsked = false;
-            Toast("SEEN STEALING");
+            return true;
         }
 
-        void OnFineGuardArrived(Operative g) => AskFine();
+void OnFineGuardArrived(Operative g)
+        {
+            if (searching)
+            {
+                var inv = Alcax.Items.PlayerInventory.Instance;
+                int stolen = inv != null ? inv.StolenValue() : 0;
+                if (stolen > 0) { fineValue = stolen; AskFine("Random check. Hold still... What's this? That isn't yours."); }
+                else AskClear();
+                return;
+            }
+            AskFine();
+        }
 
-        void AskFine()
+        void AskClear()
+        {
+            var npc = fineGuard != null ? fineGuard.GetComponent<Npc>() : null;
+            if (npc == null || DialogueUI.Instance == null || DialogueUI.Instance.IsOpen) return;
+            var t = ScriptableObject.CreateInstance<DialogueTree>();
+            t.startNode = "start";
+            t.Add("start", "Random check. Hold still... You're clear. Carry on.", ("Thanks.", "@search_clear"));
+            if (savedGuardTree == null) savedGuardTree = npc.dialogue;
+            npc.dialogue = t;
+            fineAsked = true;
+            fineAskedAt = Time.time;
+            DialogueUI.Instance.Open(npc);
+        }
+
+        void AskFine(string opening = null)
         {
             var npc = fineGuard != null ? fineGuard.GetComponent<Npc>() : null;
             var inv = Alcax.Items.PlayerInventory.Instance;
@@ -191,7 +235,7 @@ public bool Wanted { get; private set; }
             var t = ScriptableObject.CreateInstance<DialogueTree>();
             t.startNode = "start";
             bool can = inv.Credits >= fine;
-            string line = $"Hold it right there. You were seen taking things that aren't yours. The fine is {fine} credits: what it's worth, plus {FineFee}. The goods come back to us either way.";
+            string line = (opening ?? "Hold it right there. You were seen taking things that aren't yours.") + $" The fine is {fine} credits: what it's worth, plus {FineFee}. The goods come back to us either way.";
             if (can) t.Add("start", line, ($"Pay {fine} credits.", "@fine_pay"), ("I'm not paying. (Fight)", "@fine_refuse"));
             else t.Add("start", line + $" You've got {inv.Credits}? Then you hand over all of it.", ($"Hand over the goods and {inv.Credits} credits.", "@fine_pay"), ("I'm not paying. (Fight)", "@fine_refuse"));
             if (savedGuardTree == null) savedGuardTree = npc.dialogue;
@@ -206,6 +250,7 @@ public bool Wanted { get; private set; }
         {
             if (fineGuard == null || npc == null || npc.gameObject != fineGuard.gameObject) return;
             var inv = Alcax.Items.PlayerInventory.Instance;
+            if (action == "@search_clear") { CancelFine(); return; }
             if (action == "@fine_pay" && inv != null)
             {
                 int fine = FineAmount;
@@ -234,17 +279,97 @@ public bool Wanted { get; private set; }
             fineGuard = null;
             fineValue = 0;
             fineAsked = false;
+            searching = false;
+        }
+
+// ---------- Stolen goods in plain sight, and random stops ----------
+        readonly HashSet<Alcax.Items.ItemStack> recognized = new HashSet<Alcax.Items.ItemStack>();
+        float exposedFor, nextSearchCheck, searchCooldownUntil;
+        const float RecognizeRange = 8f, RecognizeSeconds = 1.5f;
+
+        /// <summary>Wearing something stolen, or holding it in your hand, where someone close gets a good look: reported.
+        /// What's in the backpack (and what you've eaten) can't be seen.</summary>
+        void UpdateStolenInSight(float dt)
+        {
+            var inv = Alcax.Items.PlayerInventory.Instance;
+            if (inv == null || Wanted) { exposedFor = 0f; return; }
+            int value = 0;
+            var shown = new List<Alcax.Items.ItemStack>();
+            foreach (var slot in Alcax.Items.PlayerInventory.BodySlots)
+            {
+                var w = inv.Worn(slot);
+                if (w != null && w.stolen && !recognized.Contains(w)) { shown.Add(w); value += w.Value; }
+            }
+            var held = inv.SelectedStack;
+            if (held != null && held.stolen && !held.def.Consumable && !recognized.Contains(held)) { shown.Add(held); value += held.Value; }
+            if (shown.Count == 0 || !Alcax.Items.Theft.Watched(RecognizeRange, out var who)) { exposedFor = 0f; return; }
+            exposedFor += dt;
+            if (exposedFor < RecognizeSeconds) return;
+            exposedFor = 0f;
+            foreach (var s in shown) recognized.Add(s);
+            ReportTheft(value, who);
+        }
+
+        /// <summary>Now and then a calm guard who can see you comes over for a random check (much likelier when you
+        /// carry stolen goods). Clean: he waves you on. Not clean: the fine.</summary>
+        void UpdateSearches()
+        {
+            if (Wanted || fineGuard != null || fineValue > 0 || Time.time < searchCooldownUntil || Time.time < nextSearchCheck) return;
+            nextSearchCheck = Time.time + 20f;
+            var p = PlayerTarget.Instance;
+            var inv = Alcax.Items.PlayerInventory.Instance;
+            if (p == null || inv == null || DialogueUI.Instance == null || DialogueUI.Instance.IsOpen) return;
+            float chance = inv.StolenValue() > 0 ? 0.35f : 0.06f;
+            if (Random.value > chance) return;
+            Operative nearest = null; float bd = 18f;
+            foreach (var g in AllUnits())
+            {
+                if (g.HostileToPlayer || !g.OnDuty || g.GetComponent<Npc>() == null) continue;
+                float d = Vector3.Distance(g.transform.position, p.Position);
+                if (d < bd && !CoverFinder.Blocked(g.EyePosition, p.HeadPosition)) { bd = d; nearest = g; }
+            }
+            if (nearest == null || !nearest.Confront(p.transform, OnFineGuardArrived)) return;
+            fineGuard = nearest;
+            fineSince = Time.time;
+            fineAsked = false;
+            searching = true;
+            searchCooldownUntil = Time.time + 180f;
+        }
+
+        /// <summary>Test hook: start a random stop now.</summary>
+        public void ForceSearch() { searchCooldownUntil = 0f; nextSearchCheck = 0f; var keep = Random.state; Random.InitState(1); UpdateSearchesForced(); Random.state = keep; }
+
+        void UpdateSearchesForced()
+        {
+            var p = PlayerTarget.Instance;
+            if (p == null || fineGuard != null) return;
+            Operative nearest = null; float bd = float.MaxValue;
+            foreach (var g in AllUnits())
+            {
+                if (g.HostileToPlayer || !g.OnDuty || g.GetComponent<Npc>() == null) continue;
+                float d = Vector3.Distance(g.transform.position, p.Position);
+                if (d < bd) { bd = d; nearest = g; }
+            }
+            if (nearest == null || !nearest.Confront(p.transform, OnFineGuardArrived)) return;
+            fineGuard = nearest; fineSince = Time.time; fineAsked = false; searching = true; searchCooldownUntil = Time.time + 180f;
         }
 
         void UpdateFine()
         {
+            UpdateStolenInSight(Time.deltaTime);
+            UpdateSearches();
+            // A fine that's waiting for you to be reachable
+            if (fineGuard == null && fineValue > 0 && !Wanted && Time.time > nextFineTry) { nextFineTry = Time.time + 2f; SendFineGuard(); }
             if (fineGuard == null) return;
             var p = PlayerTarget.Instance;
             if (fineGuard.IsDead || p == null || Wanted) { CancelFine(); return; }
             float d = Vector3.Distance(fineGuard.transform.position, p.Position);
             bool talking = DialogueUI.Instance != null && DialogueUI.Instance.IsOpen;
             // Never reached you in time, or you walked off after being asked: you're refusing
-            if ((!fineAsked && Time.time - fineSince > 60f) || (fineAsked && !talking && d > 12f)) { ReportCrime(p.Position, "EVADING A FINE"); return; }
+            bool clean = searching && fineValue <= 0;
+            if (clean && fineAsked && !talking) { CancelFine(); return; }
+            if (fineAsked && !talking && d > 12f) { ReportCrime(p.Position, "EVADING A FINE"); return; }
+            if (!fineAsked && Time.time - fineSince > 45f) { int keep = fineValue; CancelFine(); fineValue = keep; return; }   // couldn't reach you: try again later
             // Closed the conversation without answering: he asks again
             if (fineAsked && !talking && d < 3.5f && Time.time - fineAskedAt > 4f) AskFine();
         }

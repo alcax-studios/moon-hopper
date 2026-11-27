@@ -14,7 +14,9 @@ namespace Alcax.Items
         const float SightRange = 14f, SightAngle = 70f;
 
         /// <summary>Is anyone (not the owner's goods' thief) watching the player right now? Returns who.</summary>
-        public static bool Watched(out string who)
+        public static bool Watched(out string who) => Watched(SightRange, out who);
+
+        public static bool Watched(float range, out string who)
         {
             who = null;
             var p = PlayerTarget.Instance;
@@ -22,14 +24,14 @@ namespace Alcax.Items
             var head = p.HeadPosition;
             foreach (var n in Npc.Active)
             {
-                if (n == null || !n.isActiveAndEnabled) continue;
+                if (n == null || !n.isActiveAndEnabled || !n.witness) continue;
                 var civ = n.GetComponent<Civilian>();
                 if (civ != null && civ.Dead) continue;
                 var op = n.GetComponent<Operative>();
                 if (op != null && op.IsDead) continue;
                 var eye = n.FocusPoint;
                 var to = head - eye;
-                if (to.magnitude > SightRange) continue;
+                if (to.magnitude > range) continue;
                 var fwd = n.transform.forward; fwd.y = 0f; var flat = to; flat.y = 0f;
                 if (flat.sqrMagnitude > 0.01f && Vector3.Angle(fwd, flat) > SightAngle) continue;
                 if (Physics.Linecast(eye, head, AILayers.World, QueryTriggerInteraction.Ignore)) continue;

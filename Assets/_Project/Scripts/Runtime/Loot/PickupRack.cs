@@ -9,17 +9,32 @@ namespace Alcax.Loot
     {
         [SerializeField] GameObject prefab;
         [SerializeField] float restockSeconds = 20f;
+        [Tooltip("What it puts out is station property (taking it is stealing).")]
+        [SerializeField] bool stationProperty;
+        [SerializeField] string owner;
 
         GameObject current;
         float emptySince = -1f;
 
-        void Start() => current = GetComponentInChildren<Pickup>(true) != null ? GetComponentInChildren<Pickup>(true).gameObject : Spawn();
+        void Start()
+        {
+            var p = GetComponentInChildren<Pickup>(true);
+            current = p != null ? p.gameObject : Spawn();
+            Mark(current);
+        }
+
+        void Mark(GameObject go)
+        {
+            if (go == null || !go.TryGetComponent<Pickup>(out var p)) return;
+            p.stationProperty = stationProperty;
+            p.owner = owner;
+        }
 
         void Update()
         {
             if (current != null) return;
             if (emptySince < 0f) emptySince = Time.time;
-            if (Time.time - emptySince >= restockSeconds) { current = Spawn(); emptySince = -1f; }
+            if (Time.time - emptySince >= restockSeconds) { current = Spawn(); Mark(current); emptySince = -1f; }
         }
 
         GameObject Spawn()
