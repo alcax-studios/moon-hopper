@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc20a19928fffa4ba80406f22559c34, type: 3}
+  m_Name: IT_ammo_light
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Items.ItemDefinition
+  id: ammo_light
+  displayName: Light rounds
+  description: Pistol ammunition.
+  category: 1
+  maxStack: 120
+  worldModel: {fileID: 872719643262109544, guid: 7f59a0150ebae7743a869f9013795b0d, type: 3}
+  heldScale: 1
+  mass: 0.4
+  value: 1
+  weapon: {fileID: 0}
+  ammoType: 1
+  heal: 0
+  useTime: 1
+  hunger: 0
+  thirst: 0
+  energy: 0
+  effect: 
+  slot: 0
+  wearStyle: 0
+  wearColor: {r: 0.4, g: 0.42, b: 0.45, a: 1}
+  armor: 0

@@ -6,8 +6,17 @@ using UnityEngine;
 namespace Alcax.EditorTools
 {
     /// <summary>Shared helpers for the level builder: folders, materials, primitives, mesh generation, and serialized fields.</summary>
-    public static class BuildUtil
+public static class BuildUtil
     {
+        public static void EnsureLayer(int index, string name)
+        {
+            var tm = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            var p = tm.FindProperty("layers").GetArrayElementAtIndex(index);
+            if (p.stringValue == name) return;
+            p.stringValue = name;
+            tm.ApplyModifiedProperties();
+        }
+
         public const string Root = "Assets/_Project";
 
         // ---------- Folders and assets ----------

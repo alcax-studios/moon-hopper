@@ -5,6 +5,7 @@ using Alcax.Audio;
 using Alcax.Combat;
 using Alcax.Core;
 using Alcax.FX;
+using Alcax.Items;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -71,7 +72,9 @@ namespace Alcax.Player
         }
 
         readonly List<Owned> owned = new();
-        readonly Dictionary<AmmoType, int> reserve = new() { { AmmoType.Light, 0 }, { AmmoType.Shells, 0 }, { AmmoType.Rifle, 0 } };
+        // What's in hand comes from the inventory's selected hotbar slot; ammo is counted from the inventory.
+        PlayerInventory inv;
+        ItemStack bound;   // the weapon stack in hand (its magazine is written back to it)
 
         PlayerController controller;
         CharacterController body;
@@ -99,9 +102,13 @@ namespace Alcax.Player
         // Bounds-checked: a script reload during Play mode empties the inventory but can keep the index
         public WeaponData Current => current >= 0 && current < owned.Count ? owned[current].Data : null;
         public int Magazine => current >= 0 && current < owned.Count ? owned[current].Magazine : 0;
-        public int Reserve => Current != null && Current.ammoType != AmmoType.None ? reserve[Current.ammoType] : 0;
+        public int Reserve => Current != null && Current.ammoType != AmmoType.None && inv != null ? inv.CountAmmo(Current.ammoType) : 0;
+        public Transform ViewRoot => viewRoot;
+        public PlayerInventory Inventory => inv;
+        /// <summary>The hand holds a non-weapon item (HeldItem handles it; fists stay down).</summary>
+        public bool HoldingItem => inv != null && inv.SelectedStack != null && inv.SelectedStack.def.weapon == null;
         public bool Reloading => reloading;
-        public bool HasRealWeapon => owned.Count > 1;
+        public bool HasRealWeapon => Current != null && Current != fists;
         public float SpreadBloom => spreadBloom;
         /// <summary>0 at the hip, 1 fully aimed down the sights.</summary>
         public float AimAmount => aim;
@@ -124,6 +131,9 @@ namespace Alcax.Player
             attack = controller.Actions.FindActionMap("Player", true).FindAction("Attack", true);
             if (aimCamera == null) aimCamera = Camera.main;
             hitMask &= ~(1 << 2); // never hit the player or ejected debris (Ignore Raycast layer)
+            inv = GetComponent<PlayerInventory>();
+            if (inv == null) inv = gameObject.AddComponent<PlayerInventory>();
+            if (GetComponent<HeldItem>() == null) gameObject.AddComponent<HeldItem>();
         }
 
         void Start()
@@ -131,8 +141,12 @@ namespace Alcax.Player
             foreach (var c in FindObjectsByType<CinemachineCamera>())
                 if (c.Follow == controller.Head) vcam = c;
             if (vcam != null) hipFov = vcam.Lens.FieldOfView;
-            Give(fists, silent: true);
+            AddView(fists);
+            Equip(0, silent: true);
+            inv.Changed += () => SyncHand(false);
+            inv.SelectionChanged += () => SyncHand(false);
             if (AdminSettings.AllWeapons) GiveAll();
+            SyncHand(true);
         }
 
         void OnEnable()
@@ -150,16 +164,13 @@ namespace Alcax.Player
         /// <summary>Admin: give every weapon in the loot table, keeping the current one equipped.</summary>
         void GiveAll()
         {
-            if (current < 0) return;
-            var keep = current;
-            var list = new List<WeaponData>();
-            if (allWeapons != null) foreach (var w in allWeapons) if (w != null && w != fists && !list.Contains(w)) list.Add(w);
-            foreach (var w in list)
-            {
-                bool have = owned.Exists(o => o.Data == w);
-                if (!have) Give(w, silent: true);
-            }
-            Equip(keep, silent: true);
+            if (inv == null) return;
+            if (allWeapons != null)
+                foreach (var w in allWeapons)
+                {
+                    var def = ItemDatabase.ForWeapon(w);
+                    if (w != null && w != fists && def != null && inv.Count(def) == 0) inv.Add(def, 1, quiet: true);
+                }
         }
 
         void AddAdminAmmo()
@@ -193,12 +204,11 @@ namespace Alcax.Player
 
             if (InputLive)
             {
-                HandleSwitching();
-
                 var data = Current;
                 if (data == null) return;   // inventory lost to a script reload during Play mode
-                bool wantsAttack = debugFire ||
-                    (data.automatic || data.kind == WeaponKind.Melee ? attack.IsPressed() : attack.WasPressedThisFrame());
+                wantsAttackBlocked = HoldingItem || PlayerGrabber.Holding || Time.time - PlayerGrabber.LastRelease < 0.25f;
+                bool wantsAttack = !wantsAttackBlocked && (debugFire ||
+                    (data.automatic || data.kind == WeaponKind.Melee ? attack.IsPressed() : attack.WasPressedThisFrame()));
 
                 // Firing interrupts a shell-by-shell reload once there's a round to shoot.
                 if (wantsAttack && reloading && data.reloadPerShell && owned[current].Magazine > 0)
@@ -211,43 +221,52 @@ namespace Alcax.Player
                 if (kb != null && kb.rKey.wasPressedThisFrame) TryReload();
             }
 
+            if (bound != null && current >= 0 && owned[current].Data == bound.def.weapon) bound.loaded = owned[current].Magazine;
             AnimateView(dt);
         }
 
-        void HandleSwitching()
+        bool wantsAttackBlocked;
+
+/// <summary>Put the selected hotbar item in hand: its weapon, or fists (hidden) for anything else.</summary>
+        void SyncHand(bool silent)
         {
-            var kb = Keyboard.current;
-            if (kb != null)
+            if (inv == null) return;
+            var s = inv.SelectedStack;
+            var w = s != null && s.def.weapon != null ? s.def.weapon : fists;
+            var want = w == fists ? null : s;
+            if (current >= 0 && Current == w && bound == want) return;
+            // Keep the rounds in the magazine of the gun going away
+            if (bound != null && current >= 0 && owned[current].Data == bound.def.weapon) bound.loaded = owned[current].Magazine;
+            int idx = owned.FindIndex(o => o.Data == w);
+            if (idx < 0) idx = AddView(w);
+            bound = want;
+            if (idx == current)
             {
-                if (AdminSettings.DevMenuOpen) { /* number keys belong to the dev menu */ }
-                else if (kb.digit1Key.wasPressedThisFrame) Equip(0);
-                if (kb.digit2Key.wasPressedThisFrame) Equip(1);
-                if (kb.digit3Key.wasPressedThisFrame) Equip(2);
-                if (kb.digit4Key.wasPressedThisFrame) Equip(3);
-                if (kb.digit5Key.wasPressedThisFrame) Equip(4);
+                // Same kind of gun, another one: swap the magazine count
+                if (bound != null) { if (bound.loaded < 0) bound.loaded = w.magazineSize; owned[idx].Magazine = bound.loaded; }
+                Changed?.Invoke();
+                return;
             }
-            var mouse = Mouse.current;
-            if (mouse != null && owned.Count > 1)
-            {
-                float scroll = mouse.scroll.ReadValue().y;
-                if (scroll > 0.1f) Equip((current + 1) % owned.Count);
-                else if (scroll < -0.1f) Equip((current - 1 + owned.Count) % owned.Count);
-            }
+            if (bound != null) { if (bound.loaded < 0) bound.loaded = w.magazineSize; owned[idx].Magazine = bound.loaded; }
+            Equip(idx, silent);
         }
 
         // ---------- Inventory ----------
 
-        /// <summary>Adds a weapon, or turns a duplicate into ammo. Returns the toast text.</summary>
+/// <summary>Adds a weapon item to the inventory (with its starting ammo). Returns the toast text, or null when it didn't fit.</summary>
         public string Give(WeaponData data, bool silent = false)
         {
-            foreach (var o in owned)
-            {
-                if (o.Data != data) continue;
-                if (data.ammoType == AmmoType.None) return null;
-                AddAmmo(data.ammoType, data.magazineSize);
-                return $"+{data.magazineSize} {AmmoName(data.ammoType)}";
-            }
+            if (data == null || inv == null) return null;
+            var def = ItemDatabase.ForWeapon(data);
+            if (def == null) return null;
+            if (inv.Add(def, 1, quiet: silent) > 0) return null;
+            if (data.ammoType != AmmoType.None && data.startingReserve > 0) AddAmmo(data.ammoType, data.startingReserve);
+            return data.displayName.ToUpperInvariant();
+        }
 
+        /// <summary>The first-person model for a weapon (one per kind, made on first use). Returns its index.</summary>
+        int AddView(WeaponData data)
+        {
             var view = Instantiate(data.viewModel, viewRoot, false);
             view.name = data.viewModel.name;
             foreach (var r in view.GetComponentsInChildren<Renderer>(true))
@@ -296,18 +315,17 @@ namespace Alcax.Player
             if (tip != null && FXManager.ParticleMaterial != null) e.Trail = MakeTrail(tip);
             view.SetActive(false);
             owned.Add(e);
-            if (data.ammoType != AmmoType.None) reserve[data.ammoType] += data.startingReserve;
-
-            Equip(owned.Count - 1, silent);
-            return data.displayName.ToUpperInvariant();
+            return owned.Count - 1;
         }
 
         public bool AddAmmo(AmmoType type, int amount)
         {
-            if (type == AmmoType.None) return false;
-            reserve[type] += amount;
+            if (type == AmmoType.None || inv == null) return false;
+            var def = ItemDatabase.ForAmmo(type);
+            if (def == null) return false;
+            int left = inv.Add(def, amount);
             Changed?.Invoke();
-            return true;
+            return left < amount;
         }
 
         public static string AmmoName(AmmoType t) => t == AmmoType.Shells ? "SHELLS" : t == AmmoType.Rifle ? "RIFLE ROUNDS" : "ROUNDS";
@@ -473,14 +491,26 @@ namespace Alcax.Player
                 Vector3 dir = (cam.forward + cam.right * r.x + cam.up * r.y).normalized;
                 Vector3 end = origin + dir * data.range;
 
-                if (Physics.Raycast(origin, dir, out var hit, data.range, hitMask, QueryTriggerInteraction.Ignore))
+                bool any = Physics.Raycast(origin, dir, out var hit, data.range, hitMask, QueryTriggerInteraction.Ignore);
+                // Glass: armored stops the round (a crack); breakable lets it through weakened (a hole)
+                float glassMul = 1f; bool stoppedByGlass = false;
+                for (int g = 0; g < 4 && any && hit.collider.TryGetComponent<GlassPane>(out var pane); g++)
+                {
+                    if (!pane.OnBulletHit(hit.point, hit.normal, dir, data.damage * glassMul, out float pass)) { stoppedByGlass = true; break; }
+                    glassMul *= pass;
+                    var o2 = hit.point + dir * 0.03f;
+                    float left = data.range - Vector3.Distance(origin, o2);
+                    any = Physics.Raycast(o2, dir, out hit, left, hitMask, QueryTriggerInteraction.Ignore);
+                }
+                if (stoppedByGlass) end = hit.point;
+                else if (any)
                 {
                     end = hit.point;
                     var h = hit.collider.GetComponentInParent<Health>();
                     if (h != null && h != controller.Health && !h.IsDead)
                     {
                         var zone = hit.collider.GetComponent<HitZone>();
-                        float dmg = data.damage * (zone != null ? zone.damageMultiplier : 1f);
+                        float dmg = data.damage * glassMul * (zone != null ? zone.damageMultiplier : 1f);
                         bool head = zone != null && zone.isHead;
                         if (damageByTarget.TryGetValue(h, out var acc))
                             damageByTarget[h] = (acc.dmg + dmg, acc.point, acc.dir, acc.head || head);
@@ -620,7 +650,7 @@ namespace Alcax.Player
             var o = owned[current];
             var data = o.Data;
             if (data.kind != WeaponKind.Hitscan || o.Magazine >= data.magazineSize) return;
-            if (reserve[data.ammoType] <= 0) return;
+            if (inv == null || inv.CountAmmo(data.ammoType) <= 0) return;
             reloadInterrupt = false;
             StartCoroutine(data.reloadPerShell ? ReloadShells(o) : ReloadMagazine(o));
         }
@@ -661,8 +691,7 @@ namespace Alcax.Player
             }, Ease.OutCubic, unscaled: false);
             SoundManager.Play2D(Sfx.MagIn, 0.85f, 0.04f);
 
-            int take = Mathf.Min(o.Data.magazineSize - o.Magazine, reserve[o.Data.ammoType]);
-            reserve[o.Data.ammoType] -= take;
+            int take = inv.TakeAmmo(o.Data.ammoType, o.Data.magazineSize - o.Magazine);
             o.Magazine += take;
             Changed?.Invoke();
 
@@ -696,7 +725,7 @@ namespace Alcax.Player
             Vector3 shellBelow = new Vector3(0f, -0.06f, -0.02f);
 
             yield return new WaitForSeconds(0.12f);
-            while (o.Magazine < o.Data.magazineSize && reserve[o.Data.ammoType] > 0 && !reloadInterrupt)
+            while (o.Magazine < o.Data.magazineSize && inv.CountAmmo(o.Data.ammoType) > 0 && !reloadInterrupt)
             {
                 // Hand moves from the pump to the port, holding a shell.
                 if (o.ShellVis != null)
@@ -717,8 +746,7 @@ namespace Alcax.Player
                 }, Ease.OutCubic, unscaled: false);
                 if (o.ShellVis != null) o.ShellVis.gameObject.SetActive(false);
                 SoundManager.Play2D(Sfx.ShellInsert, 0.8f, 0.06f);
-                reserve[o.Data.ammoType]--;
-                o.Magazine++;
+                if (inv.TakeAmmo(o.Data.ammoType, 1) > 0) o.Magazine++;
                 Changed?.Invoke();
 
                 // Hand returns toward the pump.

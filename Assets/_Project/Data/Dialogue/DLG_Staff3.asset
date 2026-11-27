@@ -17,6 +17,8 @@ MonoBehaviour:
   - id: start
     line: Coffee's the only thing on this station that's never late.
     choices:
+    - text: Let's trade.
+      next: '@trade'
     - text: Busy today?
       next: topic
     - text: See you around.

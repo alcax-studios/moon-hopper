@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0a56f31eb7790b4bbcd84046d8ff478, type: 3}
+  m_Name: TOD_Atrium_Dusk
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.FX.TimeOfDayProfile
+  preset: 1
+  sunColor: {r: 1, g: 0.5, b: 0.28, a: 1}
+  sunIntensity: 1.1
+  toSun: {x: -0.34, y: 0.06, z: 1}
+  zenith: {r: 0.10211764, g: 0.15647058, b: 0.21411765, a: 0.42}
+  haze: {r: 0.78, g: 0.4, b: 0.28, a: 1}
+  ground: {r: 0.3019608, g: 0.1854902, b: 0.11647059, a: 0.55}
+  skySun: {r: 1, g: 0.42, b: 0.22, a: 1}
+  skyExposure: 0.85
+  skySunDir: {x: -0.34, y: 0.06, z: 1}
+  ambientIntensity: 0.7
+  reflectionIntensity: 0.42
+  fogColor: {r: 0.5, g: 0.3, b: 0.24, a: 1}
+  fogDensity: 0.0013
+  postExposure: 0.5
+  shafts: 0.55
+  lightmapColor:
+  - {fileID: 2800000, guid: 4c8b6fd46caf43641b2f23a21fbd4951, type: 3}
+  lightmapDir:
+  - {fileID: 2800000, guid: 0c5ccff393a21a842914c43203c290c0, type: 3}
+  probes: {fileID: 25800000, guid: cd1f23af8de12bb4ba9c6a597fc18d9d, type: 2}
+  reflections:
+  - {fileID: 8900000, guid: f32608e4ba23e9942a543017124b4f59, type: 3}
+  - {fileID: 8900000, guid: cd64d9142c6faa946aacf6e00290aab2, type: 3}
+  - {fileID: 8900000, guid: e7a8b7993490af4448f3d0753e2c96b7, type: 3}
+  - {fileID: 8900000, guid: 3e1586dae5f2c444b8a0dfb756f40186, type: 3}
+  - {fileID: 8900000, guid: c1176441bc414db43a1600cf3842d14d, type: 3}
+  - {fileID: 8900000, guid: c5e1c3252c8efe540b976030dccfcbb2, type: 3}
+  - {fileID: 8900000, guid: f45beca63d8732a49a05694aae99fd9a, type: 3}
+  - {fileID: 8900000, guid: 15e48e9ab9f3e3f45be5d9d5ce276133, type: 3}
+  - {fileID: 8900000, guid: dfa26d39ccafd4d428df685c95e36462, type: 3}
+  - {fileID: 8900000, guid: 06e1453ffe1efef4bbd39eda001c7278, type: 3}
+  - {fileID: 8900000, guid: 05065e5ccf4f02843b6b0ddab2c40b30, type: 3}
+  ambientProbe:
+  - 0.055437367
+  - 0.00012519254
+  - 0.006573126
+  - -0.001979053
+  - -0.0003058792
+  - 0.0021662877
+  - 0.0059053497
+  - -0.0033568589
+  - 0.01330262
+  - 0.017777964
+  - 0.001427368
+  - 0.0017056675
+  - 0.00013590585
+  - 0.00026349546
+  - 0.0010237282
+  - 0.0011882858
+  - 0.0000011363701
+  - 0.0026814356
+  - 0.012254596
+  - 0.0055597886
+  - 0.0006863222
+  - 0.00018191837
+  - 0.0001773367
+  - 0.0005235975
+  - 0.00037882465
+  - 0.00015001559
+  - 0.0008578862

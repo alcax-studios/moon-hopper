@@ -10,9 +10,10 @@ namespace Alcax.AI
     {
         public const int IgnoreRaycast = 2;
         public const int Actor = 8;
+        public const int Glass = 9;
 
-        /// <summary>Static world only: floors, walls, cover. Used for vision, cover tests, and foot IK.</summary>
-        public static readonly int World = ~((1 << IgnoreRaycast) | (1 << Actor));
+        /// <summary>Static world only: floors, walls, cover. Used for vision, cover tests, and foot IK. Glass is see-through, so it's not in here.</summary>
+        public static readonly int World = ~((1 << IgnoreRaycast) | (1 << Actor) | (1 << Glass));
 
         /// <summary>What a bullet can hit: the world plus combat characters (the player is tested separately).</summary>
         public static readonly int Bullet = ~(1 << IgnoreRaycast);

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc20a19928fffa4ba80406f22559c34, type: 3}
+  m_Name: IT_datapad
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Items.ItemDefinition
+  id: datapad
+  displayName: Data pad
+  description: A cracked tablet. It still powers on.
+  category: 5
+  maxStack: 1
+  worldModel: {fileID: 1386543237746206781, guid: 6d0e8d052e6d31c44a3b0ec17a2d4f43, type: 3}
+  heldScale: 1
+  mass: 0.5
+  value: 80
+  weapon: {fileID: 0}
+  ammoType: 0
+  heal: 0
+  useTime: 1
+  hunger: 0
+  thirst: 0
+  energy: 0
+  effect: 
+  slot: 0
+  wearStyle: 0
+  wearColor: {r: 0.4, g: 0.42, b: 0.45, a: 1}
+  armor: 0

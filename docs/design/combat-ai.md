@@ -139,11 +139,11 @@ Code is in `Assets/_Project/Scripts/Runtime/AI/`. The map comes from `Playground
 | Squad | `Squad` | Radio reports (0.7 s delay plus position error), casualty events, claimed cover spots, and who is firing (covering fire raises advance and flank scores) |
 | Player hooks | `PlayerTarget` | Body points, crouch and flashlight visibility, footstep, reload, and gunshot noises, and near-miss suppression of operatives |
 | Data | `CombatAIConfig`, `EnemyArchetype` | `Data/AI/`. The config is created once and never overwritten, so tune it live. Archetype values are set by the builder |
-| Dev tools | `PlaygroundDirector`, `AIDebugOverlay` | F1 help, F2 spawn menu (number keys; Shift = already knows where you are; Tab = faction), F3 overlay, F4 no-clip, F9 clear, F10 freeze, F11 god mode |
+| Dev tools | `PlaygroundDirector`, `AIDebugOverlay` | F1 (or F2) admin console: spawn one unit per click where the crosshair points, unaware (Shift+click: it knows where you are; the faction button cycles); AI, Player, Maps and View sections. Hotkeys: F3 overlay, F4 no-clip, F9 clear, F10 freeze, F11 god mode |
 
 The player now has a crouch (hold C or Left Ctrl). It lowers their visibility and quiets their footsteps.
 
-Layer 8 is **Actor**: combat characters have per-part colliders on it, with `HitZone` multipliers (head 2.2, torso 1.0, hips 0.9, legs 0.7 and 0.6, arms 0.6). Vision, cover, and foot IK rays use `AILayers.World`, which skips actors and the player.
+Layer 8 is **Actor**: combat characters have per-part colliders on it, with `HitZone` multipliers (head 2.2, torso 1.0, hips 0.9, legs 0.7 and 0.6, arms 0.6). Vision, cover, and foot IK rays use `AILayers.World`, which skips actors, the player, and glass (layer 9).
 
 Pulled forward from Phase 2: player shots suppress the operatives they pass close to, and operatives lay down fire on a last-known position to cover advancing squadmates.
 
@@ -182,7 +182,7 @@ Pulled forward from Phase 2: player shots suppress the operatives they pass clos
 
 **Operative footsteps** are audible (sprinting carries, sneaking is nearly silent) and they make noise for other AI too.
 
-Dev: **F2** cycles the spawn faction (Insurgents, Special Ops, Mixed). The F3 overlay adds style, faction, wound state, "unseen by you" vs "you know where I am", orders, the last callout, hidden routes (cyan), danger spots (red X), and a **COMMS** log of every callout, including radio you couldn't hear.
+Dev: the admin console's **Faction** button cycles the spawn faction (Random, then each faction). The F3 overlay adds style, faction, wound state, "unseen by you" vs "you know where I am", orders, the last callout, hidden routes (cyan), danger spots (red X), and a **COMMS** log of every callout, including radio you couldn't hear.
 
 ## 15. Confidence and morale (2026-11-25)
 
@@ -685,3 +685,30 @@ Tested in play: range fire didn't alert security. Shooting a resident in the atr
 - **Playground skirmish, 2 runs:** Special Ops won (insurgents 1 and 4 dead, Special Ops 0 dead). Target switches went from 8.2 to about 5 per fighter-minute after the evidence and dwell fixes. Nobody targeted the unseen player while hostiles were alive.
 - **Player-fight regression:** the ranged-contact test matches its earlier numbers.
 - No errors.
+
+## 31. Glass (2026-11-26)
+
+- **Layer 9, Glass.** `AILayers.World` excludes it, so units see and are seen through glass, and the cover finder never picks it. `AILayers.Bullet` includes it, so rounds meet it. The NavMesh bakes it as a blocker.
+- **`GlassPane.Kind`** is chosen per map area by its design:
+  - **Armored** (exterior, safety railings): the round stops and leaves a crack. Repeat hits within 0.3 m grow the crack up to 1.6x its size.
+  - **Breakable** (interior): the round passes at 0.75x damage and leaves a hole. When health (70) runs out, the pane shatters: its renderer, colliders and carving NavMeshObstacle switch off, and shards fly in the shot direction.
+- **Hitscan:** `WeaponHolder` and `OperativeWeapon.Shoot` loop through up to 4 panes per shot. They re-cast 3 cm past each breakable pane and multiply the damage each time.
+- **AI learning:** a unit whose own round stopped on armored glass remembers that pane (`NoteArmoredGlass`). Any unit treats a pane with 2 or more cracks as known armor. Before firing, the unit linecasts the Glass mask. If known armor is in the way, it holds fire (`HoldFire = "armored glass"`) and counts it as a failed peek every 2.5 s. That pushes the decision layer toward flanking or advancing, not shooting at the glass.
+- **Test:** all 7 atrium panes were checked in Play mode. Sight is clear through every pane; the 1202 center ray meets the room wall, not the glass. Bullets register on every pane. The armored panes stopped all 6 test hits; the breakable panes passed 3 and shattered. No console errors.
+
+## 32. Tracking a moving target (2026-11-26)
+
+- **The exploit:** sprinting in a circle around a guard at close range made you nearly unhittable. The aim is a critically damped follow, and against a target sweeping across the view it trails by about smoothTime x angular speed (10 to 28 degrees at 5 m). The old lead was mostly negative (latency), and the lateral-speed error multiplier reached about 7x. The aim was "off" in 11 to 70% of frames, so they rarely fired at all.
+- **The fix (in `OperativeAim.Track`):**
+  - The target's angular velocity is measured and fed forward by the follow time (75 to 100% of it, by skill).
+  - Steady motion is learned: while the aim keeps falling behind in the direction of motion, an extra lead grows (up to 0.18 s, faster for skilled shooters) and decays when the target stops sweeping.
+  - `Operative` keeps only a small visual-latency lag (-0.1 to -0.02 s). The lateral error multiplier is capped at 2.8x.
+- **Test:** sprint-circling a rifleman at 5 m for 14 s, 3 trials each.
+
+| | Shots | Hits |
+|---|---|---|
+| Before | 3 to 9 | 1 to 8 |
+| After | 52 to 85 | 42 to 82 |
+| Standing still (after) | 60 to 90 | 59 to 87 |
+
+Circling at close range is no longer an escape. Breaking line of sight, cover, and distance still are.

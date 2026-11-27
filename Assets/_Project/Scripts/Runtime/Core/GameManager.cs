@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace Alcax.Core
 {
-    public enum GameState { Title, Playing, Paused, Ended, Dialogue }
+    public enum GameState { Title, Playing, Paused, Ended, Dialogue, Menu, Transfer, Prompt }
 
     /// <summary>Owns the game state machine (Title, Playing, Paused, Ended) and the run stats.</summary>
     public class GameManager : MonoBehaviour
@@ -31,7 +31,7 @@ namespace Alcax.Core
 
         /// <summary>Gameplay input is ignored until this time (so the click that closes a menu doesn't also swing).</summary>
         public static float InputResumeTime;
-        public static bool InputLive => IsPlaying && Time.unscaledTime >= InputResumeTime;
+        public static bool InputLive => IsPlaying && Time.unscaledTime >= InputResumeTime && !AdminSettings.ConsoleOpen;
 
         void Awake()
         {
@@ -66,6 +66,9 @@ namespace Alcax.Core
                     if (kb != null && kb.escapeKey.wasPressedThisFrame) SetState(GameState.Playing);
                     break;
                 case GameState.Dialogue:
+                case GameState.Menu:
+                case GameState.Transfer:
+                case GameState.Prompt:
                     if (kb != null && kb.escapeKey.wasPressedThisFrame) SetState(GameState.Playing);
                     break;
                 case GameState.Ended:
@@ -73,8 +76,10 @@ namespace Alcax.Core
                     break;
             }
 
-            // Re-lock the cursor if the window lost and regained focus mid-play.
-            if (State == GameState.Playing && mouse != null && mouse.leftButton.wasPressedThisFrame)
+            // Keep the cursor matching the state: locked in play (after closing a menu, a refocus, or anything that
+            // freed it), free in menus. The Editor can drop the lock on its own, so this runs every frame.
+            bool wantLocked = State == GameState.Playing && !AdminSettings.ConsoleOpen;
+            if (Application.isFocused && (wantLocked ? Cursor.lockState != CursorLockMode.Locked || Cursor.visible : Cursor.lockState != CursorLockMode.None || !Cursor.visible))
                 ApplyCursor();
         }
 
@@ -92,9 +97,12 @@ namespace Alcax.Core
             StateChanged?.Invoke(prev, next);
         }
 
+        /// <summary>Re-apply the cursor lock (after the admin console opens or closes).</summary>
+        public static void RefreshCursor() { if (Instance != null) Instance.ApplyCursor(); }
+
         void ApplyCursor()
         {
-            bool locked = State == GameState.Playing;
+            bool locked = State == GameState.Playing && !AdminSettings.ConsoleOpen;
             Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
             Cursor.visible = !locked;
         }

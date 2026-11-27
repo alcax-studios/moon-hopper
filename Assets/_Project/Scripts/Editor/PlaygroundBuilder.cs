@@ -365,6 +365,14 @@ namespace Alcax.EditorTools
             agent.height = 1.8f;
             c.gameObject.AddComponent<Health>();
             c.gameObject.AddComponent<OperativeBody>();
+            if (d.name == "Guard")
+            {
+                var npc = c.gameObject.AddComponent<Alcax.Dialogue.Npc>();
+                npc.displayName = "Officer";
+                npc.role = "Station Security";
+                npc.drivesBody = false;
+                npc.dialogue = GuardDialogue();
+            }
             var op = c.gameObject.AddComponent<Operative>();
             SetRef(op, "archetype", a);
             SetRef(op, "config", config);
@@ -373,6 +381,29 @@ namespace Alcax.EditorTools
             var prefab = PrefabUtility.SaveAsPrefabAsset(c.gameObject, path);
             Object.DestroyImmediate(c.gameObject);
             return prefab;
+        }
+
+/// <summary>What an off-duty-ish guard has to say.</summary>
+        static Alcax.Dialogue.DialogueTree GuardDialogue()
+        {
+            const string path = Root + "/Data/Dialogue/DLG_Guard.asset";
+            if (!AssetDatabase.IsValidFolder(Root + "/Data/Dialogue")) AssetDatabase.CreateFolder(Root + "/Data", "Dialogue");
+            AssetDatabase.DeleteAsset(path);
+            var t = ScriptableObject.CreateInstance<Alcax.Dialogue.DialogueTree>();
+            t.startNode = "start";
+            t.Add("start", "Station Security. Everything alright?",
+                ("What does security do around here?", "job"), ("Seen any trouble lately?", "trouble"), ("Where can I find weapons?", "armory"), ("Just passing through.", "bye"));
+            t.Add("job", "Keep the peace, check the pads, walk the halls. Mostly we stop people doing something stupid outside the range.",
+                ("Ask something else.", "start"), ("Thanks.", "bye"));
+            t.Add("trouble", "Insurgent cells have been probing the outer locks. If shooting starts, get behind something solid and let us work.",
+                ("Ask something else.", "start"), ("I can handle myself.", "handle"));
+            t.Add("handle", "Then handle yourself on our side of the line. Shoot one of us and you're the problem.",
+                ("Understood.", "start"), ("See you.", "bye"));
+            t.Add("armory", "East hall, the door across from the range. The quartermaster signs everything out. Live fire on the range only.",
+                ("Ask something else.", "start"), ("Thanks.", "bye"));
+            t.Add("bye", "Stay safe out there.");
+            AssetDatabase.CreateAsset(t, path);
+            return t;
         }
 
         /// <summary>Weapon models from primitives. +Z forward, origin at the butt (or the grip, for a pistol).</summary>

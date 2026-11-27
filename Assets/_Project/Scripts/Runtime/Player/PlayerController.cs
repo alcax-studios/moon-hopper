@@ -46,6 +46,7 @@ namespace Alcax.Player
         public bool debugSprint;
 
         InputAction move, look, jump, sprint, crouch;
+        PlayerVitals vitals;
         float standHeight, crouchBlend, sprintBob;
         CharacterController cc;
         Health health;
@@ -114,6 +115,8 @@ namespace Alcax.Player
         {
             cc = GetComponent<CharacterController>();
             health = GetComponent<Health>();
+            vitals = GetComponent<PlayerVitals>();
+            if (vitals == null) vitals = gameObject.AddComponent<PlayerVitals>();
             var map = actions.FindActionMap("Player", true);
             move = map.FindAction("Move", true);
             look = map.FindAction("Look", true);
@@ -150,7 +153,7 @@ namespace Alcax.Player
             if (dead) { UpdateDeath(dt); return; }
 
             Vector2 mv = debugOverride ? debugMove : (InputLive ? move.ReadValue<Vector2>() : Vector2.zero);
-            Vector2 lk = debugOverride ? debugLook : (InputLive ? look.ReadValue<Vector2>() : Vector2.zero);
+            Vector2 lk = debugOverride ? debugLook : (InputLive && !AdminSettings.ConsoleOpen ? look.ReadValue<Vector2>() : Vector2.zero);
             LookDelta = lk;
 
             // Look
@@ -168,7 +171,7 @@ namespace Alcax.Player
             // Move
             bool sprintHeld = debugOverride ? debugSprint : (InputLive && sprint.IsPressed());
             UpdateCrouch(dt);
-            IsSprinting = sprintHeld && mv.y > 0.1f && !IsCrouching;
+            IsSprinting = sprintHeld && mv.y > 0.1f && !IsCrouching && (vitals == null || vitals.CanSprint);
             Vector3 wish = transform.right * mv.x + transform.forward * mv.y;
             if (wish.sqrMagnitude > 1f) wish.Normalize();
             wish *= (IsSprinting ? sprintSpeed : walkSpeed) * AimSlowdown * Mathf.Lerp(1f, crouchSpeedFactor, crouchBlend);
@@ -180,7 +183,10 @@ namespace Alcax.Player
             {
                 if (verticalVelocity < 0f) verticalVelocity = -2f;
                 if (InputLive && !debugOverride && jump.WasPressedThisFrame())
+                {
                     verticalVelocity = Mathf.Sqrt(-2f * gravity * jumpHeight);
+                    vitals?.OnJump();
+                }
             }
             float fallSpeed = verticalVelocity;
             verticalVelocity += gravity * dt;

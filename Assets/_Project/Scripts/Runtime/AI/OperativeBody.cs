@@ -80,9 +80,9 @@ namespace Alcax.AI
         }
 
         /// <summary>Let go of the weapon: it falls to the ground as a physics object.</summary>
-        public void DropWeapon()
+        public Transform DropWeapon()
         {
-            if (weapon == null) return;
+            if (weapon == null) return null;
             var w = weapon;
             weapon = null;
             w.SetParent(null, true);
@@ -93,6 +93,7 @@ namespace Alcax.AI
             rb.mass = 3.5f;
             rb.AddForce(transform.forward * 1.2f + Vector3.up * 0.8f, ForceMode.Impulse);
             rb.AddTorque(Random.insideUnitSphere * 2f, ForceMode.Impulse);
+            return w;
         }
 
         /// <summary>Stop animating (the physics death takes over).</summary>

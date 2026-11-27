@@ -29,6 +29,8 @@ namespace Alcax.Combat
 
         /// <summary>When this returns true, incoming damage is ignored (admin god mode).</summary>
         public Func<bool> DamageBlocked;
+        /// <summary>Scales incoming damage (armor). Null = 1.</summary>
+        public Func<DamageInfo, float> DamageScale;
 
         void Awake()
         {
@@ -45,6 +47,7 @@ namespace Alcax.Combat
         {
             if (IsDead || info.Amount <= 0f) return;
             if (DamageBlocked != null && DamageBlocked()) return;
+            if (DamageScale != null) info.Amount *= Mathf.Max(0f, DamageScale(info));
             Current = Mathf.Max(0f, Current - info.Amount);
             Damaged?.Invoke(info);
             if (Current <= 0f)

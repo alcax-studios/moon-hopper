@@ -1,4 +1,5 @@
 using Alcax.Combat;
+using Alcax.Core;
 using Alcax.Player;
 using UnityEngine;
 
@@ -24,8 +25,8 @@ namespace Alcax.AI
 
         public Health Health => controller.Health;
         public bool IsDead => controller.Health.IsDead;
-        /// <summary>Flying in no-clip: not a target (dev tool).</summary>
-        public bool NoClipping => controller.NoClip;
+        /// <summary>Flying in no-clip, or the admin Invisible cheat: not a target (dev tools).</summary>
+        public bool NoClipping => controller.NoClip || AdminSettings.Invisible;
         public Vector3 Position => transform.position;
         public Vector3 Velocity => controller.PlanarVelocity;
         public Transform Head => controller.Head;

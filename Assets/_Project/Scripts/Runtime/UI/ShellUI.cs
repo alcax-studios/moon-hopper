@@ -102,14 +102,6 @@ namespace Alcax.UI
             UIFactory.Button(col, "Resume", () => GameManager.Instance.Resume(), new Vector2(420f, 64f));
             UIFactory.Button(col, "Restart", () => GameManager.Instance.Restart(), new Vector2(420f, 64f));
             UIFactory.Button(col, "Settings", OpenSettings, new Vector2(420f, 64f));
-            // Map switching: every other map in the list
-            string current = UnityEngine.SceneManagement.SceneManager.GetActiveScene().path;
-            foreach (var (mapName, path) in GameManager.Maps)
-            {
-                if (path == current) continue;
-                string p = path;
-                UIFactory.Button(col, "Go to: " + mapName, () => GameManager.Instance.LoadMap(p), new Vector2(420f, 64f));
-            }
             UIFactory.Button(col, "Quit", () => GameManager.Instance.Quit(), new Vector2(420f, 64f));
 
             BuildSettings(root);
@@ -147,11 +139,9 @@ namespace Alcax.UI
             SetInteractive(ended, false);
         }
 
-        // ---------- Settings (General + Admin tabs) ----------
+        // ---------- Settings (audio and mouse; cheats are in the admin console) ----------
 
-        CanvasGroup settings, generalTab, adminTab;
-        UnityEngine.UI.Image tabUnderline;
-        RectTransform tabGeneralBtn, tabAdminBtn;
+        CanvasGroup settings, generalTab;
 
         void BuildSettings(Transform root)
         {
@@ -170,14 +160,7 @@ namespace Alcax.UI
             var title = UIFactory.Text("Title", p, "SETTINGS", 64f, Palette.Accent, TextAlignmentOptions.Center, 16f, 0.2f);
             UIFactory.Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(900f, 80f), new Vector2(0.5f, 1f));
 
-            // Tabs
-            tabGeneralBtn = (RectTransform)UIFactory.Button(p, "General", () => ShowTab(false), new Vector2(260f, 56f)).transform;
-            UIFactory.Place(tabGeneralBtn, new Vector2(0.5f, 1f), new Vector2(-140f, -130f), new Vector2(260f, 56f), new Vector2(0.5f, 1f));
-            tabAdminBtn = (RectTransform)UIFactory.Button(p, "Admin", () => ShowTab(true), new Vector2(260f, 56f)).transform;
-            UIFactory.Place(tabAdminBtn, new Vector2(0.5f, 1f), new Vector2(140f, -130f), new Vector2(260f, 56f), new Vector2(0.5f, 1f));
-            tabUnderline = UIFactory.Image("TabUnderline", p, Palette.Accent);
-            UIFactory.Place(tabUnderline.rectTransform, new Vector2(0.5f, 1f), new Vector2(-140f, -192f), new Vector2(260f, 6f), new Vector2(0.5f, 1f));
-
+            // (Cheats live in the in-game admin console, F1)
             // General tab
             generalTab = Group("GeneralTab", p);
             var gcol = UIFactory.Rect("Column", generalTab.transform);
@@ -190,30 +173,6 @@ namespace Alcax.UI
             UIFactory.Slider(gcol, "Mouse sensitivity", (GameSettings.LookSensitivity - 0.25f) / 2.75f,
                 v => GameSettings.LookSensitivity = 0.25f + v * 2.75f, 600f);
 
-            // Admin tab
-            adminTab = Group("AdminTab", p);
-            var note = UIFactory.Text("Note", adminTab.transform, "TESTING CHEATS. EVERYTHING STARTS OFF.", 20f,
-                Palette.WithAlpha(Palette.UIBone, 0.6f), TextAlignmentOptions.Center, 6f, 0.1f);
-            UIFactory.Place(note.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -222f), new Vector2(1000f, 30f), new Vector2(0.5f, 1f));
-
-            var left = UIFactory.Rect("Toggles", adminTab.transform);
-            UIFactory.Place(left, new Vector2(0.5f, 1f), new Vector2(-250f, -270f), new Vector2(560f, 420f), new Vector2(0.5f, 1f));
-            var ll = left.gameObject.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
-            ll.spacing = 12f; ll.childAlignment = TextAnchor.UpperLeft;
-            ll.childControlWidth = false; ll.childControlHeight = false; ll.childForceExpandHeight = false;
-            UIFactory.Toggle(left, "God mode (no damage)", AdminSettings.GodMode, v => AdminSettings.GodMode = v);
-            UIFactory.Toggle(left, "Infinite ammo", AdminSettings.InfiniteAmmo, v => AdminSettings.InfiniteAmmo = v);
-            UIFactory.Toggle(left, "All weapons", AdminSettings.AllWeapons, AdminSettings.SetAllWeapons);
-            UIFactory.Toggle(left, "One-hit kills", AdminSettings.OneHitKills, v => AdminSettings.OneHitKills = v);
-
-            var right = UIFactory.Rect("Actions", adminTab.transform);
-            UIFactory.Place(right, new Vector2(0.5f, 1f), new Vector2(330f, -270f), new Vector2(380f, 420f), new Vector2(0.5f, 1f));
-            var rl = right.gameObject.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
-            rl.spacing = 16f; rl.childAlignment = TextAnchor.UpperCenter;
-            rl.childControlWidth = false; rl.childControlHeight = false; rl.childForceExpandHeight = false;
-            UIFactory.Button(right, "Full heal", AdminSettings.RequestFullHeal, new Vector2(380f, 58f));
-            UIFactory.Button(right, "+50 ammo", AdminSettings.RequestAmmo, new Vector2(380f, 58f));
-
             var back = UIFactory.Button(p, "Back", CloseSettings, new Vector2(320f, 60f));
             UIFactory.Place((RectTransform)back.transform, new Vector2(0.5f, 0f), new Vector2(0f, 36f), new Vector2(320f, 60f), new Vector2(0.5f, 0f));
 
@@ -224,12 +183,8 @@ namespace Alcax.UI
 
         void ShowTab(bool admin)
         {
-            generalTab.alpha = admin ? 0f : 1f;
-            adminTab.alpha = admin ? 1f : 0f;
-            SetInteractive(generalTab, !admin);
-            SetInteractive(adminTab, admin);
-            var x = (admin ? tabAdminBtn : tabGeneralBtn).anchoredPosition.x;
-            tabUnderline.rectTransform.anchoredPosition = new Vector2(x, tabUnderline.rectTransform.anchoredPosition.y);
+            generalTab.alpha = 1f;
+            SetInteractive(generalTab, true);
         }
 
         void OpenSettings()

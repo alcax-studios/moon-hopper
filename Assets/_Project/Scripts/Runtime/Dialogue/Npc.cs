@@ -17,6 +17,8 @@ namespace Alcax.Dialogue
         public string displayName = "Ines";
         public string role = "Guest Services";
         public DialogueTree dialogue;
+        [Tooltip("Off: this only provides the conversation (name, dialogue, talking state); something else animates the body (a guard's combat rig).")]
+        public bool drivesBody = true;
         [SerializeField] float lookRadius = 7f;
         [SerializeField] float stepLength = 0.65f;
 
@@ -183,6 +185,7 @@ namespace Alcax.Dialogue
 
         void Update()
         {
+            if (!drivesBody) return;
             float t = Time.time + seed;
             float dt = Time.deltaTime;
             float sit = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(SitBlend));

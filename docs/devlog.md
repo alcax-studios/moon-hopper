@@ -2,6 +2,82 @@
 
 Newest entries first.
 
+## 2026-11-26: Fridge door, cabinet units, cursor lock
+
+- The fridge door swings out into the room (the angle sign was reversed).
+- The room 1202 kitchen run is 5 lower and 5 upper cabinet units, with doors, gaps, and handles. Each unit is its own container.
+- The cursor re-locks every frame in play whenever something freed it (closing the inventory, loot, or trade, or the Editor dropping the lock), and stays free in menus.
+
+## 2026-11-26: Fixed: the stamina bar never moved
+
+- The HUD looked up PlayerVitals before the player added it, so the stamina and need bars never updated. It looks the component up until found now. The stamina bar eases to its value, a trailing chip shows what you just spent, it brightens while recovering, pulses red when exhausted, and dims when full. Tested: 100 to 31 after 3 s of sprinting (the chip held at full), then back to 76.
+
+## 2026-11-26: Survival: stamina, needs, effects, sleep, and furniture
+
+- Stamina (sprint and jump, recovers after a pause, an empty bar locks out sprinting until 30%), and food, water, and energy that drain slowly. Low needs slow recovery; empty food or water costs health. HUD bars sit under health.
+- Effects: Charge (energy drink) gives Energized (no drain for 12 s), then a 3 s Crash. Coffee gives Caffeinated; sleep gives Well rested. New drinks: water bottle and Charge. Sinks are free water.
+- The hotel bed: sleep until one of the next two times of day. The room 1202 fridge has a real door with physical items inside; the cabinets, island, nightstands, vanity, and armory medical cabinet are containers.
+- Fixed: `GetComponent<T>() is { }` lets Unity's fake-null through in the editor. It broke focus points on bodies (an exception every frame), and NPC rounds hitting other NPCs were treated as stopped by armored glass, so NPC-vs-NPC damage failed in editor play. TryGetComponent now.
+- Tested: sprint to empty (locked out until 30%), Charge (no drain, then a Crash), the sink (water 78 to 100), the fridge door blocking its contents until opened, and sleeping from Day to Night (energy 100, Well rested, max stamina 120).
+
+## 2026-11-26: Theft fixes and a plainer UI
+
+- Fixed: opening a container with E closed it again in the same frame (the loot window also closes on E), so nothing could be taken. The opening press is ignored now. Tested with real key events.
+- Containers aren't stealable themselves; their contents are (red STEAL tags, Steal All). Added station property: stealable with no owner.
+- Removed UI commentary: owner names, "taking is stealing", who is watching, window hint lines, captions, placeholder texts, and named-witness toasts.
+
+## 2026-11-26: Credits are an item
+
+- Money is a stackable Credits item (no stack limit). The balance is what you carry. Containers and bodies show their cash as a stack. Tested: start 150, spend all (the stack is gone), sell 3 coffee (a new stack of 3), +40 (43, same stack), a register holding 201 as a stack.
+
+## 2026-11-26: Item menus everywhere
+
+- The item menu and Details popup are shared (`ItemMenus`). Right-click works in the loot and trade windows too. Details shows the value and the stolen tag.
+- Fixed: double-click in the inventory never fired, because the first click opened the menu under the cursor. A single left click now opens the menu after 0.28 s unless a second click comes.
+
+## 2026-11-26: Fixed: circle-strafing made you unhittable
+
+- The AI aim now feeds your angular motion forward and learns steady motion within about a second. Sprinting in circles around a guard went from 1 to 8 hits taken in 14 s to 42 to 82, about the same as standing still. Details: combat-ai.md section 32.
+
+## 2026-11-26: Loot, money, traders, theft, and time of day
+
+- **Loot:** containers (supply crates, lockers, registers, a fridge, a lost and found) and every person carry items from loot tables. Bodies are searchable (tap E; holding E still drags), and dropped guns are takable items. The two-sided loot window has double-click, drag, and Take All (R).
+- **Money:** credits and item values. **Traders:** the quartermaster and the three food stalls buy and sell ("Let's trade."), with markups, buy rates, and limited budgets.
+- **Theft:** owned items and containers. Unseen, an item is just marked stolen. Seen, a guard comes to fine you (value + 50: pay, or refuse and fight). Selling stolen goods to a trader is an instant crime. The Atrium has owned and free test items around the info desk.
+- **Time of day:** Day, Dusk, and Night in the admin console's World section. The Atrium bakes once per preset and swaps the lightmaps, probes, and reflections at runtime. The lower-light preset is named Dusk.
+- Dialogue choices can trigger actions (`@trade`, `@fine_pay`, `@fine_refuse`). Guards gained a Confront duty state.
+- Tested: looting a body (credits, ammo, the gun on the floor), buying and selling with Noor (her budget moved), a seen theft (the fine dialogue opened in 3 s, and paying cleared it), fencing (wanted), and a screenshot of each time of day.
+
+## 2026-11-26: Inventory, items, game menu, and dragging
+
+- Items are data now (`ItemDefinition`, 22 items across weapon, ammo, aid, food, wearable, and misc; built by Alcax > Rebuild Item Assets). Weapons and ammo live in the inventory, and the 8-slot hotbar (1 to 8, wheel) decides what is in your hands. Reloads draw rounds from the inventory, and every gun keeps its own magazine.
+- **Tab** opens the game menu: Inventory (6 x 5 backpack, hotbar, five body slots, a live character preview in what you wear, armor totals, drag and drop, an item menu with Use, Wear, Split, Drop, and Details), Quests, Codex, and Status. The world keeps running while it is open.
+- Wearables give armor (head armor against headshots only). Aid and food heal: hold the attack button with them in hand, or Use them from the menu.
+- First quest (*Orientation*) and codex entries that unlock from items, people, and factions; the HUD gets a hotbar strip, a use bar, and a quest tracker. Notices queue instead of overwriting each other.
+- **Dragging:** hold E on a prop or body to carry or drag it, release to drop, click to throw. Tap E takes world items. The Atrium has loose items (mugs, coffee, rations, bandages, armor, a data pad, a keycard) and props (crates, folding chairs, bins).
+- Medkit pickups now go into the inventory instead of healing on the spot. Nothing is auto-collected anymore (ammo too): everything takes E.
+- Movable things show a crosshair cue (corner brackets) instead of a text prompt; grabbing is silent.
+- Fixed: with domain reload off at Play mode, static events and the quest log carried over between sessions (a MissingReferenceException from the menu). They reset at startup now.
+- Details: docs/design/inventory.md.
+
+## 2026-11-26: Admin console
+
+- F1 (or F2) opens one admin console on every map. It frees the cursor and pauses mouse look and attacks; you can still walk.
+- **Spawn:** one unit per click, where the crosshair points, always unaware. A ray goes from the screen center, through glass, and snaps to the nearest walkable point. Aim at a wall and the unit lands on the floor in front of it. Repeat clicks scatter up to 1.2 m, never through a wall. With no walkable ground in view, nothing spawns. Shift+click makes it know where you are. A Faction button cycles Random and each faction. Units of the same faction join one squad, up to 6. The old multi-unit presets (squads, patrols, high ground, skirmish) are gone from the menu.
+- **AI:** alert everyone hostile to you, clear spawned units, freeze, AI overlay mode. **Player:** god mode, no-clip, infinite ammo, one-hit kills, all weapons, full heal, +50 ammo. **Maps:** load or reload any map. **View:** dev text size.
+- Sections are collapsible headers (Spawn starts open). A closed header shows a short summary, such as the faction, the active cheats or the current map. The scroll height is measured from what is drawn, which fixes the last map being cut off.
+- **Invisible** (Player section): no AI can see or target you, and their rounds pass through you. Units already hunting you search your last known spot, then lose interest.
+- The Esc menu is now Resume, Restart, Settings (volume, mouse) and Quit. The Admin tab and the map buttons moved to the console.
+- Glass marks are removed when a pane shatters (both faces are one object now).
+
+## 2026-11-26: Glass
+
+- Glass has its own physics layer (9, Glass). Everyone sees through it: vision and cover rays skip it, so glass is never cover. Bodies still cannot walk through it, and the NavMesh treats it as a wall.
+- **Armored** glass (the atrium window wall, the mezzanine railings, the room 1202 view) stops bullets. Each hit leaves a crack, and hits close together grow it into a spiderweb. The AI stops shooting through armored glass it has seen bounce a round, or that shows 2 or more cracks, and repositions instead (`HoldFire = "armored glass"`).
+- **Breakable** glass (the 3 range viewing panes) lets bullets through at 75% damage and leaves holes. After about 70 damage it shatters into shards, and the opening becomes walkable.
+- `GlassPane` (Combat) handles marks, shatter and sounds. The player and NPC hitscan loops pass through breakable panes. Each map area picks a kind with `AtriumBuilder.ArmoredGlass` / `BreakableGlass`.
+- Details: combat-ai.md section 31.
+
 ## 2026-11-26: NPC versus NPC
 
 - The AI now fights any hostile character, not just the player: a common target type, factions that declare who they fight, grudges (shoot me and you're hostile), contact lists, and a focus target re-picked every 0.4 s with hysteresis.

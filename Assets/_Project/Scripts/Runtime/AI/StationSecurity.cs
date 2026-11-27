@@ -80,12 +80,14 @@ public bool Wanted { get; private set; }
         {
             Hearing.Listen(OnHear);
             Civilian.Hurt += OnCivilianHurt;
+            DialogueUI.ActionPicked += OnDialogueAction;
         }
 
         void OnDisable()
         {
             Hearing.Stop(OnHear);
             Civilian.Hurt -= OnCivilianHurt;
+            DialogueUI.ActionPicked -= OnDialogueAction;
             if (Instance == this) Instance = null;
         }
 
@@ -135,6 +137,116 @@ public bool Wanted { get; private set; }
         {
             var p = PlayerTarget.Instance;
             if (p != null && info.Source == p.gameObject) Crime(p.Position, "OFFICER UNDER FIRE");
+        }
+
+/// <summary>A crime by the player (fencing stolen goods, refusing a fine): every guard turns on him.</summary>
+        public void ReportCrime(Vector3 where, string reason)
+        {
+            CancelFine();
+            Crime(where, reason);
+        }
+
+        // ---------- Theft and fines ----------
+        // Seen stealing: the nearest calm guard walks up and asks for a fine (what you took, plus a fee). Pay it (the
+        // goods go back), hand everything over if you can't, or refuse and fight. Walking off or stalling is refusing.
+        const int FineFee = 50;
+        int fineValue;
+        Operative fineGuard;
+        float fineSince, fineAskedAt = -10f;
+        bool fineAsked;
+        DialogueTree savedGuardTree;
+
+        public bool FinePending => fineGuard != null;
+        public int FineAmount => fineValue + FineFee;
+
+        public void ReportTheft(int value, string witness)
+        {
+            if (Wanted) return;
+            var p = PlayerTarget.Instance;
+            if (p == null) return;
+            fineValue += value;
+            if (fineGuard != null && !fineGuard.IsDead) { Toast($"FINE: {FineAmount} CR"); return; }
+            Operative best = null; float bd = float.MaxValue;
+            foreach (var g in AllUnits())
+            {
+                if (g.HostileToPlayer || !g.OnDuty || g.GetComponent<Npc>() == null) continue;
+                float d = Vector3.Distance(g.transform.position, p.Position);
+                if (d < bd) { bd = d; best = g; }
+            }
+            if (best == null || !best.Confront(p.transform, OnFineGuardArrived)) { Crime(p.Position, "THEFT"); fineValue = 0; return; }
+            fineGuard = best;
+            fineSince = Time.time;
+            fineAsked = false;
+            Toast("SEEN STEALING");
+        }
+
+        void OnFineGuardArrived(Operative g) => AskFine();
+
+        void AskFine()
+        {
+            var npc = fineGuard != null ? fineGuard.GetComponent<Npc>() : null;
+            var inv = Alcax.Items.PlayerInventory.Instance;
+            if (npc == null || inv == null || DialogueUI.Instance == null || DialogueUI.Instance.IsOpen) return;
+            int fine = FineAmount;
+            var t = ScriptableObject.CreateInstance<DialogueTree>();
+            t.startNode = "start";
+            bool can = inv.Credits >= fine;
+            string line = $"Hold it right there. You were seen taking things that aren't yours. The fine is {fine} credits: what it's worth, plus {FineFee}. The goods come back to us either way.";
+            if (can) t.Add("start", line, ($"Pay {fine} credits.", "@fine_pay"), ("I'm not paying. (Fight)", "@fine_refuse"));
+            else t.Add("start", line + $" You've got {inv.Credits}? Then you hand over all of it.", ($"Hand over the goods and {inv.Credits} credits.", "@fine_pay"), ("I'm not paying. (Fight)", "@fine_refuse"));
+            if (savedGuardTree == null) savedGuardTree = npc.dialogue;
+            npc.dialogue = t;
+            npc.CanTalk = true;
+            fineAsked = true;
+            fineAskedAt = Time.time;
+            DialogueUI.Instance.Open(npc);
+        }
+
+        void OnDialogueAction(string action, Npc npc)
+        {
+            if (fineGuard == null || npc == null || npc.gameObject != fineGuard.gameObject) return;
+            var inv = Alcax.Items.PlayerInventory.Instance;
+            if (action == "@fine_pay" && inv != null)
+            {
+                int fine = FineAmount;
+                int paid = Mathf.Min(fine, inv.Credits);
+                inv.Spend(paid);
+                inv.ConfiscateStolen();
+                Toast($"FINE PAID: {paid} CR");
+                CancelFine();
+            }
+            else if (action == "@fine_refuse")
+            {
+                var p = PlayerTarget.Instance;
+                ReportCrime(p != null ? p.Position : fineGuard.transform.position, "RESISTING A FINE");
+            }
+        }
+
+        void CancelFine()
+        {
+            if (fineGuard != null)
+            {
+                var npc = fineGuard.GetComponent<Npc>();
+                if (npc != null && savedGuardTree != null) npc.dialogue = savedGuardTree;
+                fineGuard.EndConfront();
+            }
+            savedGuardTree = null;
+            fineGuard = null;
+            fineValue = 0;
+            fineAsked = false;
+        }
+
+        void UpdateFine()
+        {
+            if (fineGuard == null) return;
+            var p = PlayerTarget.Instance;
+            if (fineGuard.IsDead || p == null || Wanted) { CancelFine(); return; }
+            float d = Vector3.Distance(fineGuard.transform.position, p.Position);
+            bool talking = DialogueUI.Instance != null && DialogueUI.Instance.IsOpen;
+            // Never reached you in time, or you walked off after being asked: you're refusing
+            if ((!fineAsked && Time.time - fineSince > 60f) || (fineAsked && !talking && d > 12f)) { ReportCrime(p.Position, "EVADING A FINE"); return; }
+            // Closed the conversation without answering: he asks again
+            if (fineAsked && !talking && d < 3.5f && Time.time - fineAskedAt > 4f) AskFine();
         }
 
         void Crime(Vector3 where, string reason)
@@ -221,6 +333,7 @@ void ArmAllStaff()
 
 void Update()
         {
+            UpdateFine();
             bool threat = false;
             foreach (var g in AllUnits()) if (g.HasNpcThreat) { threat = true; break; }
             if (threat) { lastThreat = Time.time; if (!ThreatActive) Toast("SECURITY ALERT: HOSTILES ON THE STATION"); }

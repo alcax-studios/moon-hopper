@@ -17,6 +17,8 @@ MonoBehaviour:
   - id: start
     line: Grill's hot. Protein is real, mostly.
     choices:
+    - text: Let's trade.
+      next: '@trade'
     - text: Mostly?
       next: topic
     - text: See you around.

@@ -116,6 +116,16 @@ namespace Alcax.AI
                 var o2 = hit.point + dir * 0.02f;
                 world = Physics.Raycast(o2, dir, out hit, range - Vector3.Distance(origin, o2), AILayers.Bullet, QueryTriggerInteraction.Ignore);
             }
+            // Glass: armored stops the round (and I learn it), breakable lets it through weakened
+            float glassMul = 1f;
+            for (int g = 0; g < 4 && world && hit.collider.TryGetComponent<GlassPane>(out var pane); g++)
+            {
+                if (!pane.OnBulletHit(hit.point, hit.normal, dir, a.damage * glassMul, out float pass)) { op.NoteArmoredGlass(pane); break; }
+                glassMul *= pass;
+                var o3 = hit.point + dir * 0.03f;
+                world = Physics.Raycast(o3, dir, out hit, range - Vector3.Distance(origin, o3), AILayers.Bullet, QueryTriggerInteraction.Ignore);
+            }
+            bool glassStop = world && hit.collider.TryGetComponent<GlassPane>(out var stopPane) && stopPane.Armored;
             float worldDist = world ? Vector3.Distance(origin, hit.point) : range;
 
             if (player != null && player.Raycast(origin, dir, worldDist, out float pd, out bool head, out float bodyZone))   // the player stands on Ignore Raycast: test his capsule
@@ -123,7 +133,7 @@ namespace Alcax.AI
                 var point = origin + dir * pd;
                 player.Health.TakeDamage(new DamageInfo
                 {
-                    Amount = a.damage * bodyZone,
+                    Amount = a.damage * glassMul * bodyZone,
                     Point = point, Direction = dir, Knockback = 0.6f, Headshot = head, Source = op.gameObject,
                 });
                 player.AddPressure(0.35f);
@@ -136,14 +146,14 @@ namespace Alcax.AI
             var end = origin + dir * worldDist;
             if (world)
             {
-                var h = hit.collider.GetComponentInParent<Health>();
+                var h = glassStop ? null : hit.collider.GetComponentInParent<Health>();
                 if (h != null && !h.IsDead)
                 {
                     // Friendly fire is real: a squadmate in the line of fire takes the round
                     var zone = hit.collider.GetComponent<HitZone>();
                     h.TakeDamage(new DamageInfo
                     {
-                        Amount = a.damage * (zone != null ? zone.damageMultiplier : 1f),
+                        Amount = a.damage * glassMul * (zone != null ? zone.damageMultiplier : 1f),
                         Point = hit.point, Direction = dir, Knockback = 0.5f, Headshot = zone != null && zone.isHead, Source = op.gameObject,
                     });
                     FXManager.Blood(hit.point, hit.normal, 8);
@@ -151,7 +161,7 @@ namespace Alcax.AI
                     var victim = h.GetComponent<Operative>();
                     if (victim != null && op.IsHostile(victim)) op.OnHitPlayer();   // a hit on the target counts the same, whoever it is
                 }
-                else
+                else if (!glassStop)
                 {
                     FXManager.Dust(hit.point, hit.normal, 6);
                     if (Random.value < 0.35f) Hearing.Emit(hit.point, 6f, NoiseKind.Impact, op.gameObject);

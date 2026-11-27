@@ -9,19 +9,21 @@ using UnityEngine.SceneManagement;
 namespace Alcax.AI
 {
     /// <summary>
-    /// The admin tools, on every map (a core dev feature, not tied to the AI Playground). Created once at startup and
-    /// kept across map loads.
-    ///   F1 help   F2 spawn menu (number keys; Shift = they know where you are; Tab = faction; stays open)
-    ///   F3 AI overlay   F4 or double-tap Space: no-clip   F9 clear AI   F10 freeze AI   F11 god mode   [ ] dev text size
-    /// Spawns land on random reachable points anywhere on the walkable map, away from the player.
+    /// The admin console, on every map (a core dev feature, not tied to any map). Created once at startup and kept
+    /// across map loads. F1 opens it (the cursor frees up; you can still walk). Sections: Spawn (one unit per click,
+    /// unaware, where the crosshair points; Shift+click: it knows where you are), AI, Player, Maps, View.
+    /// Hotkeys work with it closed: F3 AI overlay, F4 or double-tap Space no-clip, F9 clear, F10 freeze AI, F11 god mode.
     /// </summary>
     public class AdminTools : MonoBehaviour
     {
         public static AdminTools Instance { get; private set; }
 
         SpawnCatalog catalog;
-        bool help, menu;
-        int factionMode = -1;   // -1: mixed (each squad rolls); otherwise a faction index
+        bool open;
+        Vector2 scroll;
+        readonly Dictionary<Faction, Squad> squadOf = new Dictionary<Faction, Squad>();
+        Squad noFactionSquad;
+        int factionMode = -1;   // -1: random per spawn; otherwise a faction index
         int squadCounter;
         string toast;
         float toastUntil, lastSpaceTap = -1f;
@@ -31,7 +33,7 @@ namespace Alcax.AI
         public SpawnCatalog Catalog => catalog;
         public CombatAIConfig Config => catalog != null ? catalog.config : null;
         public Faction[] Factions => catalog != null ? catalog.factions : null;
-        string FactionLabel => Factions == null || Factions.Length == 0 ? "none" : factionMode >= 0 && factionMode < Factions.Length ? Factions[factionMode].displayName : "Mixed";
+        string FactionLabel => Factions == null || Factions.Length == 0 ? "none" : factionMode >= 0 && factionMode < Factions.Length ? Factions[factionMode].displayName : "Random";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
@@ -53,58 +55,104 @@ namespace Alcax.AI
 
         void OnDestroy() => SceneManager.sceneLoaded -= OnSceneLoaded;
 
-        void OnSceneLoaded(Scene s, LoadSceneMode mode)
+void OnSceneLoaded(Scene s, LoadSceneMode mode)
         {
             Operative.Frozen = false;
-            menu = false;
-            AdminSettings.DevMenuOpen = false;
-            // The test map opens with the help showing; elsewhere it stays out of the way until F1
-            help = FindAnyObjectByType<PlaygroundDirector>() != null;
+            squadOf.Clear(); noFactionSquad = null;
+            SetOpen(false);
+        }
+
+        void SetOpen(bool on)
+        {
+            open = on;
+            AdminSettings.ConsoleOpen = on;
+            AdminSettings.DevMenuOpen = on;
+            GameManager.RefreshCursor();
         }
 
         void Update()
         {
             var kb = Keyboard.current;
-            if (kb == null || !GameManager.IsPlaying) { AdminSettings.DevMenuOpen = false; return; }
-            EnsurePlayerTarget();
-            bool shift = kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
-            if (kb.f1Key.wasPressedThisFrame) help = !help;
-            if (kb.f2Key.wasPressedThisFrame) menu = !menu;
-            AdminSettings.DevMenuOpen = menu;
-            if (menu && catalog != null && catalog.presets != null)
+            if (kb == null || !GameManager.IsPlaying)
             {
-                if (kb.tabKey.wasPressedThisFrame && Factions != null && Factions.Length > 0)
-                    factionMode = factionMode + 1 >= Factions.Length ? -1 : factionMode + 1;
-                var digits = new[] { kb.digit1Key, kb.digit2Key, kb.digit3Key, kb.digit4Key, kb.digit5Key, kb.digit6Key, kb.digit7Key, kb.digit8Key, kb.digit9Key };
-                for (int d = 0; d < digits.Length && d < catalog.presets.Length; d++)
-                {
-                    if (!digits[d].wasPressedThisFrame) continue;
-                    var sp = catalog.presets[d];
-                    if (sp.patrol) SpawnPatrol();
-                    else if (!string.IsNullOrEmpty(sp.versusFaction)) SpawnSkirmish(sp);
-                    else Spawn(sp.names, sp.high, shift, catalog.FactionNamed(sp.faction));
-                    break;
-                }
+                // Pausing (Esc) closes the console so the pause menu owns the cursor
+                if (open && GameManager.Instance != null && GameManager.Instance.State != GameState.Playing) { open = false; AdminSettings.ConsoleOpen = false; AdminSettings.DevMenuOpen = false; }
+                return;
             }
+            EnsurePlayerTarget();
+            if (kb.f1Key.wasPressedThisFrame || kb.f2Key.wasPressedThisFrame) SetOpen(!open);
             bool doubleSpace = false;
             if (kb.spaceKey.wasPressedThisFrame)
             {
                 doubleSpace = Time.unscaledTime - lastSpaceTap < 0.3f;
                 lastSpaceTap = doubleSpace ? -1f : Time.unscaledTime;
             }
-            if (kb.f4Key.wasPressedThisFrame || doubleSpace)
-            {
-                var pc = FindAnyObjectByType<PlayerController>();
-                if (pc != null) { pc.SetNoClip(!pc.NoClip); Toast(pc.NoClip ? "NO-CLIP ON  (Space up, C down, Shift fast)" : "NO-CLIP OFF"); }
-            }
-            if (kb.leftBracketKey.wasPressedThisFrame) { DevGUI.UserScale = Mathf.Max(0.6f, DevGUI.UserScale - 0.1f); Toast($"DEV TEXT {DevGUI.UserScale:0.0}x"); }
-            if (kb.rightBracketKey.wasPressedThisFrame) { DevGUI.UserScale = Mathf.Min(2.5f, DevGUI.UserScale + 0.1f); Toast($"DEV TEXT {DevGUI.UserScale:0.0}x"); }
+            if (kb.f4Key.wasPressedThisFrame || doubleSpace) ToggleNoClip();
             if (kb.f9Key.wasPressedThisFrame) ClearAll();
-            if (kb.f10Key.wasPressedThisFrame) { Operative.Frozen = !Operative.Frozen; Toast(Operative.Frozen ? "AI FROZEN" : "AI RESUMED"); }
-            if (kb.f11Key.wasPressedThisFrame) { AdminSettings.GodMode = !AdminSettings.GodMode; Toast(AdminSettings.GodMode ? "GOD MODE ON" : "GOD MODE OFF"); }
+            if (kb.f10Key.wasPressedThisFrame) ToggleFreeze();
+            if (kb.f11Key.wasPressedThisFrame) ToggleGod();
         }
 
-        static void EnsurePlayerTarget()
+        void ToggleNoClip()
+        {
+            var pc = FindAnyObjectByType<PlayerController>();
+            if (pc != null) { pc.SetNoClip(!pc.NoClip); Toast(pc.NoClip ? "NO-CLIP ON  (Space up, C down, Shift fast)" : "NO-CLIP OFF"); }
+        }
+        void ToggleFreeze() { Operative.Frozen = !Operative.Frozen; Toast(Operative.Frozen ? "AI FROZEN" : "AI RESUMED"); }
+        void ToggleGod() { AdminSettings.GodMode = !AdminSettings.GodMode; Toast(AdminSettings.GodMode ? "GOD MODE ON" : "GOD MODE OFF"); }
+
+/// <summary>Where the player is looking: a ray from the screen center (through glass), snapped to the nearest
+        /// walkable point. A wall hit steps back off the wall; repeat clicks scatter a little so units don't stack.</summary>
+        bool AimSpawn(out Vector3 pos)
+        {
+            pos = default;
+            var cam = Camera.main;
+            if (cam == null) return false;
+            var ray = new Ray(cam.transform.position, cam.transform.forward);
+            if (!Physics.Raycast(ray, out var hit, 250f, AILayers.World, QueryTriggerInteraction.Ignore)) return false;
+            var at = hit.point + hit.normal * 0.6f;
+            // Pointed at a wall (or a ceiling): the floor right below, in front of it
+            if (hit.normal.y < 0.6f && Physics.Raycast(at + Vector3.up * 0.2f, Vector3.down, out var floor, 80f, AILayers.World, QueryTriggerInteraction.Ignore))
+                at = floor.point;
+            if (!NavMesh.SamplePosition(at, out var nav, 3f, NavMesh.AllAreas)
+                && !NavMesh.SamplePosition(hit.point, out nav, 3f, NavMesh.AllAreas)) return false;
+            // Scatter repeat clicks a little, staying connected to the aimed spot (never through a wall)
+            var j = Random.insideUnitCircle * 1.2f;
+            if (NavMesh.SamplePosition(nav.position + new Vector3(j.x, 0f, j.y), out var spread, 0.6f, NavMesh.AllAreas)
+                && !NavMesh.Raycast(nav.position, spread.position, out _, NavMesh.AllAreas)) nav = spread;
+            pos = nav.position;
+            return true;
+        }
+
+        /// <summary>One unit where the player is looking. Unaware unless told otherwise.
+        /// Units of the same faction share a squad (so they talk to each other), up to 6.</summary>
+        public Operative SpawnSingle(SpawnCatalog.Entry e, bool knowing)
+        {
+            if (e == null) return null;
+            if (!AimSpawn(out var spot)) { Toast("NO WALKABLE GROUND WHERE YOU ARE LOOKING"); return null; }
+            var faction = PickFaction();
+            Squad squad = faction != null ? (squadOf.TryGetValue(faction, out var sq) ? sq : null) : noFactionSquad;
+            if (squad == null || squad.Members.Count >= 6)
+            {
+                squad = NewSquad();
+                if (faction != null) squadOf[faction] = squad; else noFactionSquad = squad;
+            }
+            var op = SpawnOne(e, spot, squad, null, faction);
+            if (op == null) { Toast("NO SPOT FOUND"); return null; }
+            if (knowing) op.Perception.ForceCombat();
+            Toast($"{(faction != null ? faction.displayName.ToUpper() + " " : "")}{e.archetype.displayName.ToUpper()}  ({squad.callsign}){(knowing ? "  knows where you are" : "")}");
+            return op;
+        }
+
+        void AlertAll()
+        {
+            int n = 0;
+            foreach (var op in Operative.All)
+                if (!op.IsDead && op.HostileToPlayer) { op.Perception.ForceCombat(); n++; }
+            Toast($"ALERTED {n}");
+        }
+
+                static void EnsurePlayerTarget()
         {
             if (PlayerTarget.Instance != null) return;
             var pc = FindAnyObjectByType<PlayerController>();
@@ -168,27 +216,6 @@ namespace Alcax.AI
             return fallback;
         }
 
-        /// <summary>A throwaway patrol route: a few reachable random points around a spot.</summary>
-        PatrolRoute MakeRoute(Vector3 around)
-        {
-            var go = new GameObject("Patrol (spawned)");
-            var route = go.AddComponent<PatrolRoute>();
-            var path = new NavMeshPath();
-            int made = 0;
-            for (int i = 0; i < 30 && made < 4; i++)
-            {
-                var d = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(8f, 22f);
-                if (!NavMesh.SamplePosition(around + d, out var h, 3f, NavMesh.AllAreas)) continue;
-                if (!NavMesh.CalculatePath(around, h.position, NavMesh.AllAreas, path) || path.status != NavMeshPathStatus.PathComplete) continue;
-                var t = new GameObject("P" + made).transform;
-                t.SetParent(go.transform, false);
-                t.position = h.position;
-                made++;
-            }
-            if (made == 0) { var t = new GameObject("P0").transform; t.SetParent(go.transform, false); t.position = around; }
-            return route;
-        }
-
         List<Operative> Spawn(string[] names, bool high, bool knowing, Faction forced = null, Vector3? origin = null)
         {
             var made = new List<Operative>();
@@ -219,49 +246,6 @@ namespace Alcax.AI
             return made;
         }
 
-        /// <summary>Two hostile squads 25 to 35 m apart, each with a rough fix on the other.</summary>
-        void SpawnSkirmish(SpawnCatalog.Preset sp)
-        {
-            var a = PickSpawn(false);
-            Vector3 b = a;
-            var path = new NavMeshPath();
-            NavGraph.EnsureBuilt();
-            for (int i = 0; i < 80 && NavGraph.Count > 0; i++)
-            {
-                var c = NavGraph.Pos[Random.Range(0, NavGraph.Count)];
-                float d = Vector3.Distance(c, a);
-                if (d < 25f || d > 35f || Mathf.Abs(c.y - a.y) > 3f) continue;
-                if (NavMesh.CalculatePath(a, c, NavMesh.AllAreas, path) && path.status == NavMeshPathStatus.PathComplete) { b = c; break; }
-            }
-            var sideA = Spawn(sp.names, false, false, catalog.FactionNamed(sp.faction), a);
-            var sideB = Spawn(sp.versusNames ?? sp.names, false, false, catalog.FactionNamed(sp.versusFaction), b);
-            void Aware(List<Operative> us, List<Operative> them, Vector3 where)
-            {
-                if (them.Count == 0) return;
-                foreach (var op in us)
-                {
-                    var foe = them[Random.Range(0, them.Count)];
-                    op.FocusOn(foe);
-                    op.Perception.ForceCombatAt(where + Random.insideUnitSphere.Flat() * 4f, 6f);
-                }
-            }
-            Aware(sideA, sideB, b);
-            Aware(sideB, sideA, a);
-            Toast($"SKIRMISH: {sp.faction?.ToUpper()} ({sideA.Count}) vs {sp.versusFaction?.ToUpper()} ({sideB.Count})");
-        }
-
-void SpawnPatrol()
-        {
-            var squad = NewSquad();
-            var faction = PickFaction();
-            var at = PickSpawn(false);
-            var route = MakeRoute(at);
-            route.transform.SetParent(squad.transform, true);   // cleared with the squad
-            for (int i = 0; i < 2; i++)
-                SpawnOne(Find(i == 0 ? "Rifleman" : "Rookie"), route.Point(i), squad, route, faction);
-            Toast($"PATROL {squad.callsign.ToUpper()} ({route.Count} points)");
-        }
-
         void ClearAll()
         {
             // Leaves station security alone: only spawned squads go
@@ -278,14 +262,13 @@ void SpawnPatrol()
 
         // ---------- GUI ----------
 
-        void OnGUI()
+void OnGUI()
         {
-            if (!GameManager.IsPlaying && !menu && !help && Time.unscaledTime > toastUntil) return;
             if (style == null) style = new GUIStyle(GUI.skin.label) { fontSize = 14, richText = true };
             float k = DevGUI.Scale;
             var saved = GUI.matrix;
             GUI.matrix = Matrix4x4.Scale(new Vector3(k, k, 1f));
-            float W = Screen.width / k;
+            float W = Screen.width / k, H = Screen.height / k;
             if (Time.unscaledTime < toastUntil)
             {
                 GUI.color = new Color(0f, 0f, 0f, 0.55f);
@@ -293,36 +276,182 @@ void SpawnPatrol()
                 GUI.color = Color.white;
                 GUI.Label(new Rect(W * 0.5f - 240, 86, 480, 26), $"<b>{toast}</b>", new GUIStyle(style) { alignment = TextAnchor.MiddleCenter, fontSize = 16 });
             }
-            int alive = 0; foreach (var op in Operative.All) if (!op.IsDead) alive++;
-            var pcNow = FindAnyObjectByType<PlayerController>();
-            bool noclip = pcNow != null && pcNow.NoClip;
-            if (menu && catalog != null && catalog.presets != null)
-            {
-                float mh = 64 + catalog.presets.Length * 22;
-                GUI.color = new Color(0f, 0f, 0f, 0.72f);
-                GUI.DrawTexture(new Rect(W * 0.5f - 210, 130, 420, mh), Texture2D.whiteTexture);
-                GUI.color = Color.white;
-                var sb = new System.Text.StringBuilder();
-                sb.Append($"<b>SPAWN</b>   faction <color=#ffd27a>{FactionLabel}</color> <size=12>(Tab)</size>\n");
-                for (int d = 0; d < catalog.presets.Length && d < 9; d++) sb.Append($"<b>{d + 1}</b>  {catalog.presets[d].label}\n");
-                sb.Append("<size=12><color=#9cf>pick as many as you like    hold Shift: they know where you are    F2 close</color></size>");
-                GUI.Label(new Rect(W * 0.5f - 198, 136, 400, mh), sb.ToString(), new GUIStyle(style) { fontSize = 15 });
-            }
-            else if (menu)
-                GUI.Label(new Rect(W * 0.5f - 198, 136, 400, 40), "<b>SPAWN</b>  no spawn catalog (build the AI Playground once)", style);
-            if (!help) { GUI.matrix = saved; return; }
-            GUI.color = new Color(0f, 0f, 0f, 0.62f);
-            GUI.DrawTexture(new Rect(12, 12, 330, 176), Texture2D.whiteTexture);
-            GUI.color = Color.white;
-            GUI.Label(new Rect(22, 18, 320, 172),
-                "<b>ADMIN</b>\n" +
-                "F2  spawn menu        F3  AI overlay\n" +
-                $"F4 / 2x Space  no-clip {(noclip ? "<color=#9fe0a0>ON</color>" : "off")}   F9  clear\n" +
-                "F10 freeze AI         F11 god mode\n" +
-                "C  crouch   [ ]  dev text   F1  hide\n" +
-                "Esc  pause menu: switch maps\n" +
-                $"<color=#9cf>alive: {alive}   god: {(AdminSettings.GodMode ? "on" : "off")}   frozen: {(Operative.Frozen ? "yes" : "no")}</color>", style);
+            if (open && GameManager.IsPlaying) DrawConsole(W, H);
+            else if (GameManager.IsPlaying)
+                GUI.Label(new Rect(12, 8, 300, 20), "<size=11><color=#ffffff66>F1 admin</color></size>", style);
             GUI.matrix = saved;
+        }
+
+        // ---------- The console ----------
+
+        GUIStyle headStyle, sectionStyle, btnStyle, onStyle, noteStyle;
+        const float PanelW = 360f, Pad = 12f, RowH = 28f, Gap = 4f;
+        float cy;
+
+        void EnsureConsoleStyles()
+        {
+            if (headStyle != null) return;
+            Texture2D Tex(Color c) { var t = new Texture2D(1, 1); t.SetPixel(0, 0, c); t.Apply(); return t; }
+            headStyle = new GUIStyle(style) { fontSize = 17, fontStyle = FontStyle.Bold };
+            sectionStyle = new GUIStyle(style) { fontSize = 12, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, 0.82f, 0.48f) } };
+            noteStyle = new GUIStyle(style) { fontSize = 11, wordWrap = true, normal = { textColor = new Color(0.65f, 0.8f, 1f) } };
+            btnStyle = new GUIStyle(GUI.skin.button) { fontSize = 13, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(10, 10, 2, 2), richText = true };
+            btnStyle.normal.background = Tex(new Color(1f, 1f, 1f, 0.07f)); btnStyle.normal.textColor = Color.white;
+            btnStyle.hover.background = Tex(new Color(1f, 1f, 1f, 0.16f)); btnStyle.hover.textColor = Color.white;
+            btnStyle.active.background = Tex(new Color(1f, 0.82f, 0.48f, 0.35f)); btnStyle.active.textColor = Color.white;
+            onStyle = new GUIStyle(btnStyle);
+            onStyle.normal.background = Tex(new Color(0.45f, 0.85f, 0.5f, 0.22f));
+            onStyle.hover.background = Tex(new Color(0.45f, 0.85f, 0.5f, 0.32f));
+        }
+
+        // Collapsible sections (like the Inspector foldouts): Spawn starts open, the rest closed. Kept across maps.
+        readonly HashSet<string> expanded = new HashSet<string> { "SPAWN" };
+        float contentHeight = 600f;
+
+        /// <summary>A clickable section header. Returns true when the section is expanded (draw its rows).</summary>
+        bool Section(float x, float w, string title, string summary = null)
+        {
+            cy += 4f;
+            bool isOpen = expanded.Contains(title);
+            var r = new Rect(x, cy, w, 24);
+            GUI.color = new Color(1f, 0.82f, 0.48f, r.Contains(Event.current.mousePosition) ? 0.16f : 0.08f);
+            GUI.DrawTexture(r, Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUI.Label(new Rect(x + 8, cy + 3, w - 16, 18), (isOpen ? "-  " : "+  ") + title, sectionStyle);
+            if (summary != null) GUI.Label(new Rect(x + 8, cy + 3, w - 16, 18), $"<size=11><color=#ffffff80>{summary}</color></size>", new GUIStyle(style) { alignment = TextAnchor.MiddleRight });
+            if (GUI.Button(r, GUIContent.none, GUIStyle.none)) { if (isOpen) expanded.Remove(title); else expanded.Add(title); isOpen = !isOpen; }
+            cy += 28f;
+            return isOpen;
+        }
+
+        bool Button(float x, float w, string label, string hint = null)
+        {
+            bool hit = GUI.Button(new Rect(x, cy, w, RowH), label, btnStyle);
+            if (hint != null) GUI.Label(new Rect(x, cy, w - 10, RowH), $"<size=11><color=#ffffff70>{hint}</color></size>", new GUIStyle(style) { alignment = TextAnchor.MiddleRight });
+            cy += RowH + Gap;
+            return hit;
+        }
+
+        bool Toggle(float x, float w, string label, bool on, string hint = null)
+        {
+            bool hit = GUI.Button(new Rect(x, cy, w, RowH), label + (on ? "   <color=#9fe0a0><b>ON</b></color>" : "   <color=#888>off</color>"), on ? onStyle : btnStyle);
+            if (hint != null) GUI.Label(new Rect(x, cy, w - 10, RowH), $"<size=11><color=#ffffff70>{hint}</color></size>", new GUIStyle(style) { alignment = TextAnchor.MiddleRight });
+            cy += RowH + Gap;
+            return hit;
+        }
+
+        void DrawConsole(float W, float H)
+        {
+            EnsureConsoleStyles();
+            var pcNow = FindAnyObjectByType<PlayerController>();
+            int alive = 0; foreach (var op in Operative.All) if (!op.IsDead) alive++;
+            bool shift = Keyboard.current != null && (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
+
+            float panelH = H - 24f;
+            GUI.color = new Color(0.03f, 0.04f, 0.06f, 0.86f);
+            GUI.DrawTexture(new Rect(12, 12, PanelW, panelH), Texture2D.whiteTexture);
+            GUI.color = new Color(1f, 0.82f, 0.48f, 0.6f);
+            GUI.DrawTexture(new Rect(12, 12, PanelW, 2), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUI.Label(new Rect(12 + Pad, 20, PanelW - Pad * 2, 24), "ADMIN", headStyle);
+            GUI.Label(new Rect(12 + Pad, 20, PanelW - Pad * 2, 24), $"<size=11><color=#ffffff80>{SceneManager.GetActiveScene().name}   alive {alive}   F1 close</color></size>", new GUIStyle(style) { alignment = TextAnchor.MiddleRight });
+
+            float x = 0f, w = PanelW - Pad * 2 - 14f;
+            int units = catalog != null && catalog.roster != null ? catalog.roster.Length : 0;
+            var view = new Rect(12 + Pad, 50, PanelW - Pad * 2, panelH - 46);
+            scroll = GUI.BeginScrollView(view, scroll, new Rect(0, 0, w, contentHeight), false, false, GUIStyle.none, GUI.skin.verticalScrollbar);
+            cy = 0f;
+
+            // --- Spawn ---
+            if (Section(x, w, "SPAWN", FactionLabel))
+            {
+            GUI.Label(new Rect(x, cy, w, 30), "One per click, where the crosshair points, unaware. <b>Shift</b>+click: it knows where you are.", noteStyle);
+            cy += 32f;
+            if (Factions != null && Factions.Length > 0 && Button(x, w, $"Faction:  <color=#ffd27a>{FactionLabel}</color>", "click to cycle"))
+                factionMode = factionMode + 1 >= Factions.Length ? -1 : factionMode + 1;
+            if (units > 0)
+            {
+                if (Button(x, w, "<b>Random unit</b>", shift ? "aware" : null)) SpawnSingle(catalog.roster[Random.Range(0, units)], shift);
+                foreach (var e in catalog.roster)
+                    if (e != null && e.archetype != null && Button(x, w, e.archetype.displayName, shift ? "aware" : null)) SpawnSingle(e, shift);
+            }
+            else GUI.Label(new Rect(x, cy, w, 20), "No spawn catalog (build the AI Playground once).", noteStyle);
+            }
+
+            // --- AI ---
+            if (Section(x, w, "AI", Operative.Frozen ? "frozen" : null))
+            {
+            if (Button(x, w, "Alert everyone hostile to you")) AlertAll();
+            if (Button(x, w, "Clear spawned units", "F9")) ClearAll();
+            if (Toggle(x, w, "Freeze AI", Operative.Frozen, "F10")) ToggleFreeze();
+            if (Button(x, w, $"AI overlay:  <color=#ffd27a>{AIDebugOverlay.View}</color>", "F3")) AIDebugOverlay.View = (AIDebugOverlay.Mode)(((int)AIDebugOverlay.View + 1) % 3);
+            }
+
+            // --- Player ---
+            bool noclip = pcNow != null && pcNow.NoClip;
+            if (Section(x, w, "PLAYER", PlayerSummary(noclip)))
+            {
+            if (Toggle(x, w, "God mode", AdminSettings.GodMode, "F11")) ToggleGod();
+            if (Toggle(x, w, "Invisible", AdminSettings.Invisible, "nobody sees or targets you")) { AdminSettings.Invisible = !AdminSettings.Invisible; Toast(AdminSettings.Invisible ? "INVISIBLE" : "VISIBLE"); }
+            if (Toggle(x, w, "No-clip", noclip, "F4 / 2x Space")) ToggleNoClip();
+            if (Toggle(x, w, "Infinite ammo", AdminSettings.InfiniteAmmo)) AdminSettings.InfiniteAmmo = !AdminSettings.InfiniteAmmo;
+            if (Toggle(x, w, "One-hit kills", AdminSettings.OneHitKills)) AdminSettings.OneHitKills = !AdminSettings.OneHitKills;
+            if (Toggle(x, w, "All weapons", AdminSettings.AllWeapons)) AdminSettings.SetAllWeapons(!AdminSettings.AllWeapons);
+            if (Toggle(x, w, "Infinite stamina", AdminSettings.InfiniteStamina)) AdminSettings.InfiniteStamina = !AdminSettings.InfiniteStamina;
+            if (Toggle(x, w, "Needs don't drain", AdminSettings.NoNeeds)) AdminSettings.NoNeeds = !AdminSettings.NoNeeds;
+            if (Button(x, w, "Fill needs and stamina")) { Alcax.Player.PlayerVitals.Instance?.Fill(); Toast("FED, WATERED, RESTED"); }
+            if (Button(x, w, "Full heal")) { AdminSettings.RequestFullHeal(); Toast("HEALED"); }
+            if (Button(x, w, "+50 ammo")) { AdminSettings.RequestAmmo(); Toast("+50 AMMO"); }
+            }
+
+            // --- Maps ---
+            string current = SceneManager.GetActiveScene().path;
+            if (Section(x, w, "MAPS", SceneManager.GetActiveScene().name))
+            foreach (var (mapName, path) in GameManager.Maps)
+            {
+                bool here = path == current;
+                if (Button(x, w, here ? mapName + "   <color=#888>(here)</color>" : mapName, here ? "reload" : "load"))
+                {
+                    if (here) GameManager.Instance?.Restart(); else GameManager.Instance?.LoadMap(path);
+                    SetOpen(false);
+                }
+            }
+
+            // --- World ---
+            if (Section(x, w, "WORLD", Alcax.FX.TimeOfDay.Current.ToString()))
+            {
+                float third = (w - Gap * 2f) / 3f, wy = cy;
+                foreach (var (preset, i) in new[] { (Alcax.FX.TimePreset.Day, 0), (Alcax.FX.TimePreset.Dusk, 1), (Alcax.FX.TimePreset.Night, 2) })
+                {
+                    bool on = Alcax.FX.TimeOfDay.Current == preset;
+                    if (GUI.Button(new Rect(x + i * (third + Gap), wy, third, RowH), (on ? "<b>" : "") + preset + (on ? "</b>" : ""), on ? onStyle : btnStyle))
+                    { Alcax.FX.TimeOfDay.Set(preset); Toast("TIME: " + preset.ToString().ToUpper()); }
+                }
+                cy = wy + RowH + Gap;
+            }
+
+            // --- View ---
+            if (Section(x, w, "VIEW", $"text {DevGUI.UserScale:0.0}x"))
+            {
+            float half = (w - Gap) * 0.5f, y0 = cy;
+            if (GUI.Button(new Rect(x, cy, half, RowH), "Dev text  -", btnStyle)) DevGUI.UserScale = Mathf.Max(0.6f, DevGUI.UserScale - 0.1f);
+            if (GUI.Button(new Rect(x + half + Gap, cy, half, RowH), $"Dev text  +   <color=#ffffff80>{DevGUI.UserScale:0.0}x</color>", btnStyle)) DevGUI.UserScale = Mathf.Min(2.5f, DevGUI.UserScale + 0.1f);
+            cy = y0 + RowH + Gap;
+            }
+
+            contentHeight = cy + 8f;   // measured, so the scroll range always fits what is drawn
+            GUI.EndScrollView();
+        }
+
+        static string PlayerSummary(bool noclip)
+        {
+            var on = new List<string>();
+            if (AdminSettings.GodMode) on.Add("god");
+            if (AdminSettings.Invisible) on.Add("invisible");
+            if (noclip) on.Add("no-clip");
+            if (AdminSettings.InfiniteAmmo) on.Add("inf ammo");
+            if (AdminSettings.OneHitKills) on.Add("one-hit");
+            return on.Count > 0 ? string.Join(", ", on) : null;
         }
     }
 }

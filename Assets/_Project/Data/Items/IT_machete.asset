@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc20a19928fffa4ba80406f22559c34, type: 3}
+  m_Name: IT_machete
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Items.ItemDefinition
+  id: machete
+  displayName: Machete
+  description: A heavy blade. Quiet.
+  category: 0
+  maxStack: 1
+  worldModel: {fileID: 3305472504200704081, guid: f9128488f4639ea429f1847f1ae8e3f8, type: 3}
+  heldScale: 1
+  mass: 0.9
+  value: 90
+  weapon: {fileID: 11400000, guid: 015a4d1a8cb5328458dcc851dabf393e, type: 2}
+  ammoType: 0
+  heal: 0
+  useTime: 1
+  hunger: 0
+  thirst: 0
+  energy: 0
+  effect: 
+  slot: 0
+  wearStyle: 0
+  wearColor: {r: 0.4, g: 0.42, b: 0.45, a: 1}
+  armor: 0

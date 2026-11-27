@@ -210,9 +210,27 @@ namespace Alcax.AI
             if (c != null) config = c;
             faction = f;
             HostileToPlayer = f == null || f.hostileToPlayer;
+            talk = GetComponent<Alcax.Dialogue.Npc>();
             Squad = squad;
             route = patrol;
             Setup();
+            // What this person carries: searchable once dead (the gun drops separately, as an item)
+            var loot = GetComponent<Alcax.Items.LootContainer>();
+            if (loot == null) loot = gameObject.AddComponent<Alcax.Items.LootContainer>();
+            string table = faction == null ? "insurgents" : faction.displayName == "Station Security" ? "security" : faction.displayName.ToLowerInvariant();
+            loot.Configure("Body", table, null, 10, transform.Find("Rig/Body"), Health);
+        }
+
+        /// <summary>Drop the gun as a world item (with whatever was left in its magazine).</summary>
+        void DropGunAsItem()
+        {
+            var w = body.DropWeapon();
+            if (w == null) return;
+            var def = Alcax.Items.LootTables.ForNpcWeapon(archetype.weaponName);
+            if (def == null) return;
+            var wi = w.gameObject.AddComponent<Alcax.Items.WorldItem>();
+            wi.Set(new Alcax.Items.ItemStack(def, 1, def.weapon != null ? Random.Range(0, def.weapon.magazineSize + 1) : -1));
+            foreach (var c in w.GetComponentsInChildren<Collider>()) c.gameObject.layer = 0;
         }
 
         void ApplyLook()
@@ -284,6 +302,7 @@ namespace Alcax.AI
             }
             wasSeeing = seeing;
             UpdateContacts();
+            UpdateCooldown();
             var player = Target;
             if (seeing && player != null && player.IsReloading)
             {
@@ -349,7 +368,7 @@ namespace Alcax.AI
                     Surrendered = true;
                     Broken = false;
                     Callouts.Say(this, Callout.Surrender, force: true);
-                    body.DropWeapon();
+                    DropGunAsItem();
                     Mind.Poke();
                 }
                 else if (Time.time > brokenUntil)
@@ -556,7 +575,7 @@ void CheckSeenByPlayer(ICombatTarget p)
             var c = new MindContext
             {
                 Threat = threat,
-                PlayerDead = p == null || p.IsDead,
+                PlayerDead = p != null ? p.IsDead : (PlayerTarget.Instance == null || PlayerTarget.Instance.IsDead),   // no target is not the same as a dead player
                 Seeing = Perception.CanSee,
                 SinceSeen = Perception.TimeSinceSeen,
                 Distance = b.Has ? Vector3.Distance(transform.position, b.Predicted) : 999f,
@@ -628,6 +647,7 @@ void CheckSeenByPlayer(ICombatTarget p)
             sneaking = false;
             sideLean = 0f; blindFire = 0f;
             if (a != OpAction.ClearRoom) { cqbAim = null; CqbDoor = null; }
+            if (a != OpAction.Patrol) { EndDuty(); if (talk != null) { if (talk.InConversation && Alcax.Dialogue.DialogueUI.Instance != null) Alcax.Dialogue.DialogueUI.Instance.Close(); talk.CanTalk = false; } }
             if (a != OpAction.TakeCover && a != OpAction.HoldCover && a != OpAction.PeekShoot) ClaimedSpot = null;
             if (a != OpAction.PeekShoot && a != OpAction.HoldCover) peekCycles = 0;
             var b = Perception.Belief;
@@ -642,6 +662,7 @@ void CheckSeenByPlayer(ICombatTarget p)
                     break;
 
                 case OpAction.Patrol:
+                    if (OnDuty) { StartDuty(); break; }
                     if (route != null && route.Count > 0) MoveTo(route.Point(patrolIndex), archetype.walkSpeed);
                     break;
 
@@ -896,6 +917,7 @@ void CheckSeenByPlayer(ICombatTarget p)
                 case OpAction.Patrol:
                     scanning = true;
                     faceThreat = false;
+                    if (OnDuty) { TickDuty(); break; }
                     if (route == null || route.Count == 0) { ActionDone = true; break; }
                     if (phase == Phase.Moving && Arrived())
                     {
@@ -1424,6 +1446,7 @@ void CheckSeenByPlayer(ICombatTarget p)
             }
             else if (v.sqrMagnitude > 0.2f) face = v;
             else if (faceThreat) face = (Perception.Belief.Predicted - transform.position).Flat();
+            if (dutyFace.sqrMagnitude > 0.01f && v.sqrMagnitude < 0.2f && !Perception.CanSee) face = dutyFace;
             // Walking somewhere without eyes on him: face the way I walk (head and gun can still turn about 50 deg either side)
             if (config.useSteadyMoves && v.magnitude > 1f && !Perception.CanSee && !dashing && Vector3.Angle(face, v) > 90f) face = v;
             if (face.sqrMagnitude > 0.001f)
@@ -1487,7 +1510,8 @@ void CheckSeenByPlayer(ICombatTarget p)
                 case AimSource.Target:
                     if (seeing)
                     {
-                        float lead = Mathf.Lerp(-0.14f, 0.04f, Traits.skill);
+                        // Visual latency only (the aim model feeds the motion forward itself)
+                        float lead = Mathf.Lerp(-0.1f, -0.02f, Traits.skill);
                         target = p.AimPoint(aimPart) + p.Velocity * lead;
                     }
                     else if (suppressing && b.Has) target = b.Position + Vector3.up * 1.1f;
@@ -1541,7 +1565,7 @@ void CheckSeenByPlayer(ICombatTarget p)
                 float err = Mathf.Lerp(2.4f, 0.45f, Traits.skill)
                             * (1f + Emotion.stress * 1.3f + (LastStand ? 0f : Emotion.fear * 0.5f))
                             * (1f + selfSpeed / 3f)
-                            * (1f + lateral * 4f)
+                            * (1f + Mathf.Min(lateral, 1.2f) * 1.5f)
                             * (suppressing ? 2.5f : 1f)
                             * (blindFire > 0.5f ? 2.6f : 1f)
                             * (config.useMoveDoctrine && Stamina < 0.3f ? 1f + (0.3f - Stamina) * 1.5f : 1f)
@@ -1586,6 +1610,13 @@ void CheckSeenByPlayer(ICombatTarget p)
             if (Physics.Linecast(origin, target, out var blockHit, AILayers.World, QueryTriggerInteraction.Ignore))
             {
                 HoldFire = "muzzle blocked";
+                return;
+            }
+if (ArmoredGlassBetween(origin, target))
+            {
+                HoldFire = "armored glass";
+                // Shooting it is pointless: get another angle (counts like a failed peek, which pushes flanking or advancing)
+                if (Time.time > nextGlassNudge) { nextGlassNudge = Time.time + 2.5f; peekFails++; Mind.Poke(0.2f); }
                 return;
             }
             if (AllyInLine(origin, target))
@@ -2473,7 +2504,7 @@ HostileToPlayer = on;
             {
                 if (p != null) contacts.Remove(p);
                 if (Target is PlayerTarget) FocusOn(null);
-                if (!HasNpcThreat) { Perception.Calm(); ActionDone = true; }
+                if (!HasNpcThreat) calmAt = Time.time + Random.Range(2f, 8f);   // stand down on my own clock, not in lockstep
             }
             Mind.Poke(0.1f);
         }
@@ -2667,6 +2698,249 @@ HostileToPlayer = on;
             if (best != null && best != Target && bestS > 0.3f && canSwitch) FocusOn(best);
         }
 
+// ---------- Cooling down (security after a fight) ----------
+        // A unit that isn't hostile to the player by nature (a guard) relaxes on its own clock once the threat is gone:
+        // a random 5 to 14 s after the last hostile (2 to 8 s after a stand-down), then it holsters and goes back to work.
+        float calmAt = -1f;
+
+        void UpdateCooldown()
+        {
+            if (HostileToPlayer || faction == null || faction.hostileToPlayer) { calmAt = -1f; return; }
+            bool clear = !HasNpcThreat && (Target == null || Target.IsDead);
+            if (!clear || Perception.State < Alertness.Alert) { calmAt = -1f; return; }
+            if (calmAt < 0f) calmAt = Time.time + Random.Range(5f, 14f);
+            else if (Time.time >= calmAt)
+            {
+                calmAt = -1f;
+                Perception.Calm();
+                ActionDone = true;
+                Mind.Poke(0.1f);
+            }
+        }
+
+// ---------- On duty (calm security life) ----------
+        // A unit that isn't hostile to the player by nature (a guard), calm and unaware, goes about the job like the
+        // residents do: walks its route, wanders, stops at a window, the railing, or a console, and chats with another
+        // guard (meeting halfway, facing each other, taking turns). No sitting. Any threat ends it at once.
+        public bool OnDuty => !HostileToPlayer && faction != null && !faction.hostileToPlayer;
+enum Duty { Choose, Walk, Look, Chat, Confront }
+        Transform confrontTarget;
+        System.Action<Operative> confrontArrived;
+        bool confrontReached;
+
+        /// <summary>Calm duty only: walk briskly up to someone and stand facing them (security collecting a fine).
+        /// Calls back once on arrival; holds until EndConfront.</summary>
+        public bool Confront(Transform target, System.Action<Operative> arrived)
+        {
+            if (!OnDuty || IsDead || Mind.Current != OpAction.Patrol || target == null) return false;
+            EndDuty();
+            confrontTarget = target; confrontArrived = arrived; confrontReached = false;
+            duty = Duty.Confront; dutyUntil = Time.time + 90f;
+            Note = "confronting";
+            return true;
+        }
+
+        public void EndConfront()
+        {
+            if (duty != Duty.Confront) return;
+            confrontTarget = null; confrontArrived = null;
+            duty = Duty.Choose; dutyUntil = Time.time + Random.Range(1f, 3f);
+            dutyFace = Vector3.zero; body.LookPoint = null;
+        }
+
+        public bool Confronting => duty == Duty.Confront;
+        Duty duty;
+        float dutyUntil;
+        Vector3 dutyFace;
+        Alcax.Dialogue.StationPoint dutySpot;
+        Operative chatMate;
+        bool chatLeader, myTurn;
+        float nextTurn;
+        static readonly HashSet<Alcax.Dialogue.StationPoint> claimedSpots = new HashSet<Alcax.Dialogue.StationPoint>();
+
+        void StartDuty() { EndDuty(); duty = Duty.Choose; dutyUntil = Time.time + Random.Range(0.5f, 2f); }
+
+        void EndDuty()
+        {
+            if (dutySpot != null) { claimedSpots.Remove(dutySpot); dutySpot = null; }
+            if (chatMate != null) { var m = chatMate; chatMate = null; if (m.chatMate == this) { m.chatMate = null; m.duty = Duty.Choose; m.dutyUntil = Time.time + 1f; m.dutyFace = Vector3.zero; } }
+            dutyFace = Vector3.zero;
+            body.LookPoint = null;
+        }
+
+        bool FreeToChat => Mind.Current == OpAction.Patrol && OnDuty && chatMate == null && (duty == Duty.Walk || duty == Duty.Choose || duty == Duty.Look);
+
+        void TickDuty()
+        {
+            weaponRaised = false;
+            if (UpdateTalk()) return;
+            switch (duty)
+            {
+                case Duty.Choose:
+                    if (Time.time < dutyUntil) break;
+                    {
+                        float r = Random.value;
+                        if (r < 0.3f && route != null && route.Count > 0) { patrolIndex++; MoveTo(route.Point(patrolIndex), archetype.walkSpeed); duty = Duty.Walk; dutyUntil = Time.time + 40f; Note = "patrol"; }
+                        else if (r < 0.52f) { if (!WanderStep()) dutyUntil = Time.time + 1f; }
+                        else if (r < 0.82f) { if (!GoToSpot()) { if (!WanderStep()) dutyUntil = Time.time + 1f; } }
+                        else if (!InviteChat()) { if (!WanderStep()) dutyUntil = Time.time + 1f; }
+                    }
+                    break;
+                case Duty.Walk:
+                    if (Arrived() || Time.time > dutyUntil)
+                    {
+                        Stop();
+                        if (dutySpot != null)
+                        {
+                            duty = Duty.Look; dutyUntil = Time.time + Random.Range(8f, 20f);
+                            dutyFace = dutySpot.transform.forward.Flat();
+                            Note = dutySpot.kind == Alcax.Dialogue.PointKind.Console ? "at a console" : "looking out";
+                        }
+                        else { duty = Duty.Choose; dutyUntil = Time.time + Random.Range(2f, 6f); dutyFace = Vector3.zero; }
+                    }
+                    break;
+                case Duty.Look:
+                    scanning = dutySpot == null || dutySpot.kind != Alcax.Dialogue.PointKind.Console;
+                    if (Time.time > dutyUntil) { if (dutySpot != null) { claimedSpots.Remove(dutySpot); dutySpot = null; } duty = Duty.Choose; dutyUntil = Time.time + Random.Range(1f, 3f); dutyFace = Vector3.zero; }
+                    break;
+case Duty.Confront:
+                    scanning = false;
+                    if (confrontTarget == null) { EndConfront(); break; }
+                    {
+                        var to = (confrontTarget.position - transform.position).Flat();
+                        float d = to.magnitude;
+                        if (d > 2.2f) { MoveTo(confrontTarget.position, Mathf.Lerp(archetype.walkSpeed, archetype.runSpeed, 0.45f)); }
+                        else
+                        {
+                            Stop();
+                            if (to.sqrMagnitude > 0.01f) dutyFace = to.normalized;
+                            body.LookPoint = confrontTarget.position + Vector3.up * 1.6f;
+                            if (!confrontReached) { confrontReached = true; var cb = confrontArrived; cb?.Invoke(this); }
+                        }
+                    }
+                    break;
+                case Duty.Chat:
+                    scanning = false;
+                    if (chatMate == null || chatMate.IsDead || chatMate.chatMate != this || Time.time > dutyUntil) { EndDuty(); duty = Duty.Choose; dutyUntil = Time.time + Random.Range(2f, 5f); break; }
+                    if (!Arrived()) break;
+                    {
+                        var to = (chatMate.transform.position - transform.position).Flat();
+                        if (to.sqrMagnitude > 0.01f) dutyFace = to.normalized;
+                        body.LookPoint = chatMate.EyePosition;
+                        bool both = chatMate.Arrived();
+                        if (both && chatLeader && Time.time > nextTurn)
+                        {
+                            nextTurn = Time.time + Random.Range(1.8f, 4f);
+                            myTurn = !myTurn; chatMate.myTurn = !myTurn;
+                        }
+                        if (both && myTurn && Random.value < Time.deltaTime * 3f)
+                            SoundManager.PlayAt(Sfx.TalkBlip, EyePosition, 0.1f, 0.25f);
+                    }
+                    break;
+            }
+        }
+
+        bool WanderStep()
+        {
+            var path = new UnityEngine.AI.NavMeshPath();
+            for (int i = 0; i < 8; i++)
+            {
+                var guess = transform.position + new Vector3(Random.Range(-12f, 12f), 0f, Random.Range(-12f, 12f));
+                if (!UnityEngine.AI.NavMesh.SamplePosition(guess, out var h, 1.5f, UnityEngine.AI.NavMesh.AllAreas)) continue;
+                if (Mathf.Abs(h.position.y - transform.position.y) > 2f) continue;
+                if (!agent.isOnNavMesh || !agent.CalculatePath(h.position, path) || path.status != UnityEngine.AI.NavMeshPathStatus.PathComplete) continue;
+                MoveTo(h.position, archetype.walkSpeed);
+                duty = Duty.Walk; dutyUntil = Time.time + 30f; Note = "wandering";
+                return true;
+            }
+            return false;
+        }
+
+        bool GoToSpot()
+        {
+            Alcax.Dialogue.StationPoint best = null; float bd = float.MaxValue;
+            foreach (var p in Alcax.Dialogue.StationPoint.All)
+            {
+                if (p == null || p.kind == Alcax.Dialogue.PointKind.Seat || p.Occupant != null || claimedSpots.Contains(p)) continue;
+                float d = Vector3.Distance(p.transform.position, transform.position) + Random.Range(0f, 15f);
+                if (d > 45f || Mathf.Abs(p.transform.position.y - transform.position.y) > 7f) continue;
+                if (d < bd) { bd = d; best = p; }
+            }
+            if (best == null) return false;
+            claimedSpots.Add(best);
+            dutySpot = best;
+            MoveTo(best.transform.position, archetype.walkSpeed);
+            duty = Duty.Walk; dutyUntil = Time.time + 40f; Note = "going to " + best.kind.ToString().ToLower();
+            return true;
+        }
+
+        bool InviteChat()
+        {
+            Operative mate = null; float bd = 30f;
+            foreach (var o in All)
+            {
+                if (o == this || o.IsDead || !o.FreeToChat) continue;
+                float d = Vector3.Distance(o.transform.position, transform.position);
+                if (d < bd && Mathf.Abs(o.transform.position.y - transform.position.y) < 2f) { bd = d; mate = o; }
+            }
+            if (mate == null) return false;
+            var mid = (transform.position + mate.transform.position) * 0.5f;
+            if (!UnityEngine.AI.NavMesh.SamplePosition(mid, out var h, 3f, UnityEngine.AI.NavMesh.AllAreas)) return false;
+            var axis = (mate.transform.position - transform.position).Flat();
+            axis = axis.sqrMagnitude > 0.01f ? axis.normalized : transform.forward;
+            if (mate.dutySpot != null) { claimedSpots.Remove(mate.dutySpot); mate.dutySpot = null; }
+            float length = Random.Range(15f, 30f);
+            chatMate = mate; mate.chatMate = this;
+            chatLeader = true; mate.chatLeader = false;
+            myTurn = true; mate.myTurn = false;
+            duty = Duty.Chat; mate.duty = Duty.Chat;
+            dutyUntil = Time.time + length; mate.dutyUntil = dutyUntil;
+            MoveTo(h.position - axis * 0.65f, archetype.walkSpeed);
+            mate.MoveTo(h.position + axis * 0.65f, mate.archetype.walkSpeed);
+            Note = "chatting"; mate.Note = "chatting";
+            return true;
+        }
+
+// ---------- Talking (guards on duty) ----------
+        Alcax.Dialogue.Npc talk;
+        bool wasTalking;
+
+        /// <summary>Calm and on duty: the player can talk to me. Returns true while a conversation holds me in place.</summary>
+        bool UpdateTalk()
+        {
+            if (talk == null) return false;
+            if (talk.displayName == "Officer" || string.IsNullOrEmpty(talk.displayName)) talk.displayName = "Officer " + Callsign;
+            talk.CanTalk = OnDuty && !IsDead && Perception.State < Alertness.Alert && Mind.Current == OpAction.Patrol;
+            if (!talk.InConversation)
+            {
+                if (wasTalking) { wasTalking = false; body.LookPoint = null; dutyFace = Vector3.zero; if (duty != Duty.Confront) { duty = Duty.Choose; dutyUntil = Time.time + Random.Range(1f, 3f); } }
+                return false;
+            }
+            wasTalking = true;
+            var p = PlayerTarget.Instance;
+            Stop();
+            if (p != null)
+            {
+                var to = (p.Position - transform.position).Flat();
+                if (to.sqrMagnitude > 0.01f) dutyFace = to.normalized;
+                body.LookPoint = p.HeadPosition;
+            }
+            return true;
+        }
+
+// ---------- Armored glass ----------
+        // Visibly cracked glass (2+ hits) or glass my own round bounced off: don't waste ammo on it, move instead.
+        readonly HashSet<GlassPane> knownArmored = new HashSet<GlassPane>();
+        float nextGlassNudge;
+        public void NoteArmoredGlass(GlassPane p) { if (p != null) knownArmored.Add(p); }
+
+        bool ArmoredGlassBetween(Vector3 from, Vector3 to)
+        {
+            if (!Physics.Linecast(from, to, out var hit, GlassPane.Mask, QueryTriggerInteraction.Ignore)) return false;
+            var pane = hit.collider.GetComponent<GlassPane>();
+            return pane != null && pane.Armored && !pane.Broken && (knownArmored.Contains(pane) || pane.Hits >= 2);
+        }
+
         bool calledDry;
         float noAdvanceCoverTime = -100f;
         public void OnOutOfAmmo()
@@ -2775,6 +3049,7 @@ HostileToPlayer = on;
 
         void OnDied()
         {
+            if (talk != null) { if (talk.InConversation && Alcax.Dialogue.DialogueUI.Instance != null) Alcax.Dialogue.DialogueUI.Instance.Close(); talk.enabled = false; }
             ClaimedSpot = null;
             Squad?.ReportDeath(this);
             if (agent.isOnNavMesh) agent.ResetPath();
@@ -2791,7 +3066,7 @@ HostileToPlayer = on;
             body.WeaponRaised = false;
             yield return new WaitForSeconds(0.08f);
             body.Freeze();
-            body.DropWeapon();
+            DropGunAsItem();
             // Loose limbs: a ragdoll that settles, then stays put (and never blocks the player)
             Alcax.Combat.RagdollCorpse.Go(gameObject, dir + Vector3.up * 0.15f, point, 90f);
         }

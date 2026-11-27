@@ -109,6 +109,43 @@ namespace Alcax.UI
             return btn;
         }
 
+/// <summary>A compact button for in-game panels (left-aligned label, flat hover highlight).</summary>
+        public static Button SmallButton(Transform parent, string label, Action onClick, Vector2 size, float fontSize = 18f, TextAlignmentOptions align = TextAlignmentOptions.MidlineLeft)
+        {
+            var img = Image("Btn_" + label, parent, Color.white);
+            img.raycastTarget = true;
+            img.rectTransform.sizeDelta = size;
+            var btn = img.gameObject.AddComponent<Button>();
+            var colors = btn.colors;
+            colors.normalColor = Palette.WithAlpha(Palette.UIPanelLight, 0.9f);
+            colors.highlightedColor = Palette.WithAlpha(Palette.Accent, 0.85f);
+            colors.selectedColor = Palette.WithAlpha(Palette.UIPanelLight, 0.9f);
+            colors.pressedColor = Palette.AccentHot;
+            colors.disabledColor = Palette.WithAlpha(Palette.UIPanel, 0.6f);
+            colors.fadeDuration = 0.05f;
+            btn.colors = colors;
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(() =>
+            {
+                SoundManager.Play2D(Sfx.UIClick, 0.6f, 0.03f);
+                onClick?.Invoke();
+            });
+            var txt = Text("Label", img.transform, label, fontSize, Palette.UIBone, align, 2f, 0.1f);
+            Stretch(txt.rectTransform);
+            txt.rectTransform.offsetMin = new Vector2(14f, 0f); txt.rectTransform.offsetMax = new Vector2(-10f, 0f);
+            return btn;
+        }
+
+        /// <summary>Regular-weight wrapping text for descriptions.</summary>
+        public static TextMeshProUGUI Body(string name, Transform parent, string text, float size, Color color, TextAlignmentOptions align = TextAlignmentOptions.TopLeft)
+        {
+            var t = Text(name, parent, text, size, color, align, 0f, 0f);
+            t.fontStyle = FontStyles.Normal;
+            t.textWrappingMode = TextWrappingModes.Normal;
+            t.lineSpacing = 6f;
+            return t;
+        }
+
         public static Slider Slider(Transform parent, string label, float value, Action<float> onChange, float width = 420f)
         {
             var row = Rect("Slider_" + label, parent);

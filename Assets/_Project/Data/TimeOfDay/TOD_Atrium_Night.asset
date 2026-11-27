@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0a56f31eb7790b4bbcd84046d8ff478, type: 3}
+  m_Name: TOD_Atrium_Night
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.FX.TimeOfDayProfile
+  preset: 2
+  sunColor: {r: 0.55, g: 0.65, b: 0.95, a: 1}
+  sunIntensity: 0.22
+  toSun: {x: 0.42, y: 0.6, z: 0.68}
+  zenith: {r: 0.012, g: 0.018, b: 0.045, a: 1}
+  haze: {r: 0.06, g: 0.07, b: 0.11, a: 1}
+  ground: {r: 0.035, g: 0.03, b: 0.03, a: 1}
+  skySun: {r: 0.25, g: 0.3, b: 0.45, a: 1}
+  skyExposure: 0.6
+  skySunDir: {x: -0.26, y: -0.35, z: 1}
+  ambientIntensity: 0.32
+  reflectionIntensity: 0.22
+  fogColor: {r: 0.025, g: 0.03, b: 0.055, a: 1}
+  fogDensity: 0.0016
+  postExposure: 0.45
+  shafts: 0
+  lightmapColor:
+  - {fileID: 2800000, guid: 5a1a1f3f29de2ba43b3f84d3f93eeb4d, type: 3}
+  lightmapDir:
+  - {fileID: 2800000, guid: 641ba282d3435244bae30f5e7c14c937, type: 3}
+  probes: {fileID: 25800000, guid: c6ccecccc413cd64bb6b5946f949be75, type: 2}
+  reflections:
+  - {fileID: 8900000, guid: 9e33beee815c53a4aa3e3dd8d1fb149e, type: 3}
+  - {fileID: 8900000, guid: 11291c8e7a7c5b945819b515fc08ce54, type: 3}
+  - {fileID: 8900000, guid: 9a306de93fe903e46acae68e1a8ec214, type: 3}
+  - {fileID: 8900000, guid: 5247fb132b2a98e44af54ede613373bd, type: 3}
+  - {fileID: 8900000, guid: 997ee79715d0f874f924118493bb41df, type: 3}
+  - {fileID: 8900000, guid: db5f4cd9e49fa0049a273085221d0d9b, type: 3}
+  - {fileID: 8900000, guid: 044efeece93f08044a6512741d68225d, type: 3}
+  - {fileID: 8900000, guid: 072d65b20b7147f48804418642517ee7, type: 3}
+  - {fileID: 8900000, guid: 45f011f35f28c264098ec6c3eddbc775, type: 3}
+  - {fileID: 8900000, guid: 6088342ec29fad24899618e6d2d409d0, type: 3}
+  - {fileID: 8900000, guid: 450508a42217aab47a0e3bf7c1df7e38, type: 3}
+  ambientProbe:
+  - 0.00026573468
+  - 0.00008380852
+  - 0.00021374048
+  - 0.000101560836
+  - 0.0000742593
+  - 0.00016214159
+  - 0.000034266086
+  - 0.0001235311
+  - 0.000012520686
+  - 0.0002466662
+  - 0.0000775783
+  - 0.00017267143
+  - 0.000074103256
+  - 0.00005786132
+  - 0.00012128635
+  - 0.000029961051
+  - 0.000087722365
+  - 0.000015164606
+  - 0.00031983963
+  - 0.00010322391
+  - 0.00015705104
+  - 0.000036953126
+  - 0.000040700375
+  - 0.00007073022
+  - 0.00003683911
+  - 0.00003794041
+  - 0.000029046561

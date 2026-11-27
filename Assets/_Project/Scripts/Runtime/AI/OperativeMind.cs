@@ -299,7 +299,7 @@ namespace Alcax.AI
                 switch (a)
                 {
                     case OpAction.Idle: return 0.3f;
-                    case OpAction.Patrol: return c.HasRoute && c.State == Alertness.Unaware ? 0.5f : No;
+                    case OpAction.Patrol: return (c.HasRoute || op.OnDuty) && c.State == Alertness.Unaware ? 0.5f : No;
                     case OpAction.Investigate:
                         return c.HasNoise && c.State >= Alertness.Suspicious ? 0.55f + c.Awareness * 0.3f + t.aggression * 0.1f - fear * 0.3f : No;
                     case OpAction.Search: return c.State == Alertness.Alert ? 0.42f + t.aggression * 0.1f : No;

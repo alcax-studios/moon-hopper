@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Alcax.Audio;
 using Alcax.Combat;
 using Alcax.FX;
+using Alcax.Items;
 using Alcax.Player;
 using UnityEngine;
 
@@ -35,7 +36,8 @@ namespace Alcax.Loot
         Transform player;
         bool collected;
 
-        public bool RequiresInteract => kind == PickupKind.Weapon;
+        /// <summary>Everything is picked up with E (nothing is collected just by walking over it).</summary>
+        public bool RequiresInteract => true;
         public Vector3 FocusPoint => transform.position + Vector3.up * 0.35f;
 
         public string Label => kind switch
@@ -99,9 +101,10 @@ namespace Alcax.Loot
                     msg = $"+{amount} {WeaponHolder.AmmoName(ammoType)}";
                     break;
                 case PickupKind.Medkit:
-                    var health = collector.GetComponent<Health>();
-                    if (health == null || !health.Heal(heal)) return false;
-                    msg = $"+{Mathf.RoundToInt(heal)} HEALTH";
+                    var inv = collector.GetComponent<PlayerInventory>();
+                    var kit = ItemDatabase.Get("medkit");
+                    if (inv == null || kit == null || inv.Add(kit, 1) > 0) return false;
+                    msg = "PICKED UP MEDKIT";
                     break;
             }
 

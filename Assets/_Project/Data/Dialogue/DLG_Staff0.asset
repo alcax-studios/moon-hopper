@@ -17,6 +17,8 @@ MonoBehaviour:
   - id: start
     line: Armory. Everything on the wall is signed out to you the moment you lift it.
     choices:
+    - text: Let's trade.
+      next: '@trade'
     - text: Any rules?
       next: topic
     - text: See you around.

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc20a19928fffa4ba80406f22559c34, type: 3}
+  m_Name: IT_bat
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Items.ItemDefinition
+  id: bat
+  displayName: Bat
+  description: Aluminium bat. Blunt and simple.
+  category: 0
+  maxStack: 1
+  worldModel: {fileID: 3326080784533769160, guid: 15b1ca0a69e62a443bcd1896cfd1505d, type: 3}
+  heldScale: 1
+  mass: 1
+  value: 50
+  weapon: {fileID: 11400000, guid: 2fc4b4b01eb3e28479d893ab87f5a9b2, type: 2}
+  ammoType: 0
+  heal: 0
+  useTime: 1
+  hunger: 0
+  thirst: 0
+  energy: 0
+  effect: 
+  slot: 0
+  wearStyle: 0
+  wearColor: {r: 0.4, g: 0.42, b: 0.45, a: 1}
+  armor: 0

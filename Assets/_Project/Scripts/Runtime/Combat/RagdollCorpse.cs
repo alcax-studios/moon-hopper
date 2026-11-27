@@ -90,6 +90,8 @@ namespace Alcax.Combat
             rb.solverIterations = 12;
             rb.isKinematic = false;
             bodies.Add(rb);
+            // The player can drag the body by any part (hold E)
+            if (t.GetComponent<Alcax.Items.Grabbable>() == null) { var g = t.gameObject.AddComponent<Alcax.Items.Grabbable>(); g.label = "BODY"; g.carryMass = 4f; }
             if (parent != null)
             {
                 var j = t.gameObject.AddComponent<CharacterJoint>();

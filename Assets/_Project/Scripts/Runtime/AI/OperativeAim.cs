@@ -6,6 +6,9 @@ namespace Alcax.AI
     /// Human aiming, not an aimbot. The weapon direction is a critically damped follow in yaw and pitch
     /// with a capped turn speed, chasing a target point that is:
     ///  - perceived late (visual latency), which skilled shooters partly cancel by leading,
+    ///  - tracked along its motion: the target's angular velocity is fed forward, so a target sweeping across
+    ///    the view (circle-strafing) isn't trailed by the follow lag, and steady motion is learned within a second
+    ///    or so (extra lead grows while the aim keeps falling behind the same way),
     ///  - offset by a slow, wandering error that grows with stress, own movement, and target speed,
     ///  - wide right after acquiring a target, then settling as they steady.
     /// Recoil from the weapon adds on top and is dragged back by skill. No deliberate misses: when the
@@ -16,6 +19,13 @@ namespace Alcax.AI
         float yaw, pitch, yawVel, pitchVel;
         readonly float noiseSeedA, noiseSeedB;
         float acquiredAt = -100f;
+        float lastTy, lastTp, wy, wp, adapt;
+        bool hasLast;
+
+        /// <summary>The follow time constant for a skill (also how far the aim lags a moving target uncorrected).</summary>
+        public static float SmoothTime(float skill) => Mathf.Lerp(0.3f, 0.13f, skill);
+        /// <summary>Learned extra lead in seconds (diagnostics).</summary>
+        public float LearnedLead => adapt;
 
         public float ErrorDegrees { get; private set; }
 
@@ -31,10 +41,11 @@ namespace Alcax.AI
             var e = Quaternion.LookRotation(dir).eulerAngles;
             yaw = e.y; pitch = Mathf.DeltaAngle(0f, e.x);
             yawVel = pitchVel = 0f;
+            hasLast = false;
         }
 
         /// <summary>Call when a new target is picked up (sight regained): the aim starts wide and settles.</summary>
-        public void Acquire() => acquiredAt = Time.time;
+        public void Acquire() { acquiredAt = Time.time; hasLast = false; }
 
         public Vector3 Direction(Vector2 kick) => Quaternion.Euler(pitch - kick.x, yaw + kick.y, 0f) * Vector3.forward;
 
@@ -53,10 +64,31 @@ namespace Alcax.AI
             var to = targetPoint - origin;
             if (to.sqrMagnitude < 0.0001f) return;
             var e = Quaternion.LookRotation(to).eulerAngles;
-            float ty = e.y + ey, tp = Mathf.DeltaAngle(0f, e.x) + ep;
+            float ty0 = e.y, tp0 = Mathf.DeltaAngle(0f, e.x);
+
+            // The target's angular velocity (deg/s), smoothed
+            if (hasLast && dt > 0.0001f)
+            {
+                float k = 1f - Mathf.Exp(-12f * dt);
+                wy = Mathf.Lerp(wy, Mathf.Clamp(Mathf.DeltaAngle(lastTy, ty0) / dt, -400f, 400f), k);
+                wp = Mathf.Lerp(wp, Mathf.Clamp(Mathf.DeltaAngle(lastTp, tp0) / dt, -200f, 200f), k);
+            }
+            else { wy = wp = 0f; }
+            lastTy = ty0; lastTp = tp0; hasLast = true;
+
+            float smooth = SmoothTime(skill);
+            // Learn steady motion: while the target keeps sweeping one way and the aim keeps falling behind, lead more
+            float sweep = Mathf.Sqrt(wy * wy + wp * wp);
+            if (sweep > 20f)
+            {
+                float behind = (Mathf.DeltaAngle(yaw, ty0) * wy + (tp0 - pitch) * wp) / sweep;   // degrees behind, along the motion
+                adapt = Mathf.Clamp(adapt + behind / sweep * dt * Mathf.Lerp(0.8f, 2.5f, skill), -0.05f, 0.18f);
+            }
+            else adapt = Mathf.MoveTowards(adapt, 0f, dt * 0.15f);
+            float feed = smooth * Mathf.Lerp(0.75f, 1f, skill) + adapt;
+            float ty = ty0 + wy * feed + ey, tp = tp0 + wp * feed + ep;
 
             // Critically damped (SmoothDamp is the stable closed form) with a capped turn speed
-            float smooth = Mathf.Lerp(0.3f, 0.13f, skill);
             float maxSpeed = Mathf.Lerp(200f, 520f, skill);
             yaw = Mathf.SmoothDampAngle(yaw, ty, ref yawVel, smooth, maxSpeed, dt);
             pitch = Mathf.Clamp(Mathf.SmoothDamp(pitch, tp, ref pitchVel, smooth, maxSpeed, dt), -80f, 80f);

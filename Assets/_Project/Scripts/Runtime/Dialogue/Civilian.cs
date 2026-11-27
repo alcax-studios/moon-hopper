@@ -59,6 +59,10 @@ namespace Alcax.Dialogue
             rb = GetComponent<Rigidbody>();
             health.Damaged += OnDamaged;
             health.Died += OnDied;
+            // Pockets: searchable once dead
+            var loot = GetComponent<Alcax.Items.LootContainer>();
+            if (loot == null) loot = gameObject.AddComponent<Alcax.Items.LootContainer>();
+            loot.Configure("Body", "civilian", null, 8, transform.Find("Rig/Body"), health);
             if (bravery < 0f) bravery = UnityEngine.Random.value;
             postPos = transform.position;
             postRot = transform.rotation;

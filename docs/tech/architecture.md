@@ -19,7 +19,7 @@
 | `Assets/_Project/Scenes/Atrium.unity` | The station: Atrium C, the south wing, the food court, restrooms, and the airport hotel (build index 0). Generated. |
 | `Assets/_Project/Scenes/Playground.unity` | Combat-AI test map (outdoor, realtime light, no bake). Generated. |
 
-Switch maps from the pause menu ("Go to: ...", from `GameManager.Maps`) or in the Editor with **Alcax > Maps > Open/Play ...**. A new map must be added to `GameManager.Maps` and the build settings.
+Switch maps from the admin console's Maps section (F1, from `GameManager.Maps`) or in the Editor with **Alcax > Maps > Open/Play ...**. A new map must be added to `GameManager.Maps` and the build settings.
 | `Assets/Scenes/SampleScene.unity` | Template leftover, unused |
 
 ## Generated content (don't hand-edit)
@@ -29,6 +29,7 @@ Switch maps from the pause menu ("Go to: ...", from `GameManager.Maps`) or in th
 | `AtriumBuilder` | Alcax > Build Atrium Level (and Bake Atrium Lighting) | The scene, merged static meshes, materials, the NPC and dialogue asset, ships, probes, and the bake |
 | `AtriumTextures` | (called by the builder) | Ando concrete, metal, sand, bark, foliage, screen, and hazard textures |
 | `WeaponAssets` | Alcax > Rebuild Weapon Assets | Weapon data, view model prefabs, and pickup prefabs |
+| `ItemAssets` | Alcax > Rebuild Item Assets (run after the weapon assets) | `Data/Items/IT_*` item definitions, `Prefabs/Items/IM_*` visual-only world models (weapons and ammo reuse their pickup models), and `Resources/ItemDatabase` with the starting outfit |
 | `PlaygroundBuilder` | Alcax > Build AI Playground | The playground scene and NavMesh, the grid texture, the AI config and archetype assets (`Data/AI`), and the operative prefabs (`Prefabs/AI`) |
 | `CharacterRig` | (called by builders) | The shared primitive character rig. Combat mode adds elbows, gear, and hit-zone colliders on the Actor layer |
 | `PlayerRig` | (called by builders) | The player (controller, weapons, interactor, flashlight), the camera with Cinemachine, and the title camera |
@@ -38,8 +39,11 @@ Static geometry is accumulated per material in `MeshAccum` (world-scaled UVs, li
 
 ## Runtime systems
 
-- **Core:** `GameManager` (Title, Playing, Paused, Ended, and Dialogue states, `InputLive` grace), `FeelManager` (impulse shake and hit-stop), `AdminSettings` (cheats), `GameSettings` (sensitivity), and `Palette` (the single color source).
-- **Player:** `PlayerController` (with crouch), `WeaponHolder` (melee swings with two variants, hitscan, pistol magazine reloads, shotgun pump and shell reloads, ejected debris), `PlayerInteractor` (pickups and NPCs), and `Flashlight`.
+- **Core:** `GameManager` (Title, Playing, Paused, Ended, Dialogue, and Menu states, `InputLive` grace), `FeelManager` (impulse shake and hit-stop), `AdminSettings` (cheats), `GameSettings` (sensitivity), and `Palette` (the single color source).
+- **Player:** `PlayerController` (with crouch), `WeaponHolder` (melee swings with two variants, hitscan, pistol magazine reloads, shotgun pump and shell reloads, ejected debris), `PlayerInteractor` (pickups, NPCs, interactables; tap E takes a world item, hold E drags), `PlayerGrabber` (carry, drag, throw physics props), `HeldItem` (non-weapon items in hand: hold to use aid and food, click to wear), and `Flashlight`.
+- **Items (see `docs/design/inventory.md`):** `ItemDefinition`, `ItemDatabase`, `ItemStack`, `PlayerInventory` (grid, hotbar, body slots, armor), `WorldItem` (an item in the world), `Grabbable` (draggable), `QuestLog`, `Codex`, `StoryDirector` (feeds both from game events), `LootContainer` and `LootTables` (containers and people's pockets), `Trader`, and `Theft` (witness check; fines go through `StationSecurity`).
+- **Time of day:** `TimeOfDay` (the static switcher), `TimeOfDaySet` (the scene's sun, volume, probes, and shafts), and `TimeOfDayProfile` (per-preset values and baked data, written by `AtriumLighting`).
+- **Menu UI:** `GameMenu` (Tab: Inventory, Quests, Codex, Status), `InventoryPanel`, `TransferWindow` (loot and trade), `ItemSlotView` (through `ISlotPanel`), `QuestsPanel`, `CodexPanel`, `StatusPanel`, and `PreviewStudio` (renders item icons and the dressed character on layer 30, far below the map).
 - **Combat:** `Health` (with `Revive`), `HitZone`, `WeaponData`, and `TargetPlate`.
 - **Interaction:** `Interactable` (anything with an [E] prompt; picked by `PlayerInteractor`), `Elevator` and `ElevatorButton`.
 - **Station life:** `Civilian` (hurtable, panicking people on the shared rig), `AmbientNpc` (lobby life, panic and flee), `PickupRack` (restocking pickups).

@@ -17,6 +17,8 @@ MonoBehaviour:
   - id: start
     line: Noodles, broth, the spicy one if you're brave.
     choices:
+    - text: Let's trade.
+      next: '@trade'
     - text: What's good?
       next: topic
     - text: See you around.

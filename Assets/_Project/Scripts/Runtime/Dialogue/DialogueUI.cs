@@ -20,6 +20,10 @@ namespace Alcax.Dialogue
     public class DialogueUI : MonoBehaviour
     {
         public static DialogueUI Instance { get; private set; }
+        /// <summary>A conversation started (quests and the codex listen).</summary>
+        public static event System.Action<Npc> Opened;
+        /// <summary>A choice led to an action node ("@trade", "@fine_pay"...): the conversation closes and listeners act.</summary>
+        public static event System.Action<string, Npc> ActionPicked;
 
         [SerializeField] float charsPerSecond = 48f;
 
@@ -142,6 +146,7 @@ namespace Alcax.Dialogue
             speaker.text = who.displayName.ToUpperInvariant();
             role.text = who.role.ToUpperInvariant();
             GameManager.Instance.SetState(GameState.Dialogue);
+            Opened?.Invoke(who);
             group.interactable = group.blocksRaycasts = true;
             StartCoroutine(Ease.Tween(0.2f, t => group.alpha = t, Ease.OutCubic));
             Show(tree.startNode);
@@ -283,6 +288,14 @@ namespace Alcax.Dialogue
         void Pick(int index)
         {
             if (node == null || index >= node.choices.Count) return;
+            var next = node.choices[index].next;
+            if (!string.IsNullOrEmpty(next) && next.StartsWith("@"))
+            {
+                var who = npc;
+                Close();
+                ActionPicked?.Invoke(next, who);
+                return;
+            }
             // The NPC starts answering the chosen line
             if (!string.IsNullOrEmpty(node.choices[index].next) && tree.Get(node.choices[index].next) != null) SoundManager.Play2D(Sfx.DialogueReply, 0.8f, 0.03f);
             Show(node.choices[index].next);

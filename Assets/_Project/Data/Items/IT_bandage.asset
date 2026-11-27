@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc20a19928fffa4ba80406f22559c34, type: 3}
+  m_Name: IT_bandage
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Items.ItemDefinition
+  id: bandage
+  displayName: Bandage
+  description: A sterile roll. Stops the bleeding and patches you up a little.
+  category: 2
+  maxStack: 10
+  worldModel: {fileID: 231071303137940948, guid: 4f0198375b2450e40860928dfa5dc9fc, type: 3}
+  heldScale: 1.2
+  mass: 0.1
+  value: 15
+  weapon: {fileID: 0}
+  ammoType: 0
+  heal: 20
+  useTime: 1.5
+  hunger: 0
+  thirst: 0
+  energy: 0
+  effect: 
+  slot: 0
+  wearStyle: 0
+  wearColor: {r: 0.4, g: 0.42, b: 0.45, a: 1}
+  armor: 0
