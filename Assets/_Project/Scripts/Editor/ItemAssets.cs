@@ -36,6 +36,7 @@ namespace Alcax.EditorTools
                 ("W_Rifle", "rifle", "Rifle", "Automatic rifle on rifle rounds. The insurgents' favorite.", 3.6f),
                 ("W_Machete", "machete", "Machete", "A heavy blade. Quiet.", 0.9f),
                 ("W_Bat", "bat", "Bat", "Aluminium bat. Blunt and simple.", 1.0f),
+                ("W_PlasmaCarbine", "plasma_carbine", "Plasma Carbine", "PC-1 from the R&D division. Fires plasma bolts on energy cells; overheats if you hold the trigger too long.", 3.1f),
             })
             {
                 var w = AssetDatabase.LoadAssetAtPath<WeaponData>($"{Root}/Data/Weapons/{file}.asset");
@@ -46,6 +47,7 @@ namespace Alcax.EditorTools
             // ---- Ammo ----
             list.Add(Item("ammo_light", "Light rounds", "Pistol ammunition.", ItemCategory.Ammo, 120, 0.4f, FromPickup("ammo_light", "P_AmmoLight"), d => d.ammoType = AmmoType.Light));
             list.Add(Item("ammo_shells", "Shells", "12 gauge shotgun shells.", ItemCategory.Ammo, 48, 0.5f, FromPickup("ammo_shells", "P_Shells"), d => d.ammoType = AmmoType.Shells));
+            list.Add(Item("ammo_energy", "Energy charges", "Charge for plasma weapons, sold by the cell.", ItemCategory.Ammo, 128, 0.3f, FromPickup("ammo_energy", "P_EnergyCell"), d => d.ammoType = AmmoType.Energy));
             list.Add(Item("ammo_rifle", "Rifle rounds", "Rifle ammunition, boxed.", ItemCategory.Ammo, 150, 0.6f, FromPickup("ammo_rifle", "P_AmmoRifle"), d => d.ammoType = AmmoType.Rifle));
 
             // ---- Aid and food ----
@@ -66,6 +68,14 @@ namespace Alcax.EditorTools
             list.Add(Wear("pants_cargo", "Cargo pants", "Sand-colored, lots of pockets.", EquipSlot.Pants, WearStyle.Pants, new Color(0.55f, 0.5f, 0.4f), 4f, 0.8f, Pants(new Color(0.55f, 0.5f, 0.4f))));
             list.Add(Wear("boots_work", "Work boots", "Steel toes, grippy soles.", EquipSlot.Shoes, WearStyle.Boots, new Color(0.25f, 0.2f, 0.16f), 3f, 1.2f, Boots(new Color(0.25f, 0.2f, 0.16f))));
             list.Add(Wear("gloves_tactical", "Tactical gloves", "Padded knuckles, touch-screen fingertips.", EquipSlot.Gloves, WearStyle.Gloves, new Color(0.12f, 0.12f, 0.13f), 2f, 0.2f, Gloves(new Color(0.12f, 0.12f, 0.13f))));
+            // ---- Clothes people wear (lootable off bodies, piece by piece: CharacterOutfit) ----
+            var suit = new Color(0.16f, 0.18f, 0.25f);
+            list.Add(Wear("suit_jacket", "Suit jacket", "A dark tailored jacket. Station security wears these on duty.", EquipSlot.Chest, WearStyle.Jacket, suit, 2f, 1f, Jacket(suit)));
+            list.Add(Wear("suit_trousers", "Suit trousers", "Pressed dark trousers.", EquipSlot.Pants, WearStyle.Pants, suit, 1f, 0.6f, Pants(suit)));
+            list.Add(Wear("shirt_casual", "Casual shirt", "Worn, but clean.", EquipSlot.Chest, WearStyle.Jacket, new Color(0.45f, 0.3f, 0.3f), 0f, 0.3f, Jacket(new Color(0.45f, 0.3f, 0.3f))));
+            list.Add(Wear("jeans", "Jeans", "Faded denim.", EquipSlot.Pants, WearStyle.Pants, new Color(0.25f, 0.32f, 0.5f), 1f, 0.7f, Pants(new Color(0.25f, 0.32f, 0.5f))));
+            list.Add(Wear("shoes_dress", "Dress shoes", "Polished, thin-soled.", EquipSlot.Shoes, WearStyle.Boots, new Color(0.1f, 0.1f, 0.11f), 0f, 0.8f, Boots(new Color(0.1f, 0.1f, 0.11f))));
+            list.Add(Wear("sneakers", "Sneakers", "Comfortable and scuffed.", EquipSlot.Shoes, WearStyle.Boots, new Color(0.82f, 0.82f, 0.85f), 0f, 0.6f, Boots(new Color(0.82f, 0.82f, 0.85f))));
 
 // ---- Currency ----
             list.Add(Item("credits", "Credits", "Station credit chips. Every trader takes them.", ItemCategory.Currency, int.MaxValue, 0.002f, Chips(), d => d.heldScale = 1.3f));
@@ -82,7 +92,7 @@ namespace Alcax.EditorTools
             // Prices (credits)
             var prices = new System.Collections.Generic.Dictionary<string, int>
             {
-                { "pistol", 220 }, { "shotgun", 380 }, { "rifle", 540 }, { "machete", 90 }, { "bat", 50 },
+                { "pistol", 220 }, { "shotgun", 380 }, { "rifle", 540 }, { "machete", 90 }, { "bat", 50 }, { "plasma_carbine", 950 }, { "ammo_energy", 3 },
                 { "ammo_light", 1 }, { "ammo_shells", 3 }, { "ammo_rifle", 2 },
                 { "bandage", 15 }, { "medkit", 65 }, { "ration", 6 }, { "coffee", 4 }, { "noodles", 9 }, { "wrap", 8 }, { "water", 3 }, { "charge", 7 },
                 { "helmet_security", 140 }, { "cap", 12 }, { "vest_armored", 280 }, { "jacket_work", 45 }, { "pants_cargo", 35 }, { "boots_work", 40 }, { "gloves_tactical", 30 },

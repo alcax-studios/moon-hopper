@@ -97,6 +97,7 @@ public float SprintSpeed => sprintSpeed;
         public void SetNoClip(bool on)
         {
             NoClip = on;
+            Alcax.Core.AdminSettings.NoClip = on;   // (remembered between sessions)
             cc.enabled = !on;
             verticalVelocity = 0f;
             PlanarVelocity = Vector3.zero;
@@ -129,6 +130,9 @@ public float SprintSpeed => sprintSpeed;
         public float AimSlowdown { get; set; } = 1f;
         public float AimSensitivity { get; set; } = 1f;
         public InputActionAsset Actions => actions;
+
+        /// <summary>No-clip as you left it (admin settings are remembered between sessions).</summary>
+        void Start() { if (Alcax.Core.AdminSettings.NoClip) SetNoClip(true); }
 
         void Awake()
         {

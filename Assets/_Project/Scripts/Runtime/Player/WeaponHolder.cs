@@ -69,6 +69,7 @@ namespace Alcax.Player
             // Gun parts (all optional)
             public Transform Slide, Pump, Mag, SupportHand, ShellVis, CasingVis;
             public Vector3 SlidePos, PumpPos, MagPos, SupportPos, ShellVisPos;
+            public PlasmaRig Rig;   // plasma weapons: heat, coils, vents
         }
 
         readonly List<Owned> owned = new();
@@ -109,6 +110,9 @@ namespace Alcax.Player
         public bool HoldingItem => inv != null && inv.SelectedStack != null && inv.SelectedStack.def.weapon == null;
         public bool Reloading => reloading;
         public bool HasRealWeapon => Current != null && Current != fists;
+        /// <summary>Plasma weapons: 0..1 heat, and whether it's overheated (venting). 0 and false otherwise.</summary>
+        public float Heat => current >= 0 && current < owned.Count && owned[current].Rig != null ? owned[current].Rig.Heat : 0f;
+        public bool Overheated => current >= 0 && current < owned.Count && owned[current].Rig != null && owned[current].Rig.Overheated;
         public float SpreadBloom => spreadBloom;
         /// <summary>0 at the hip, 1 fully aimed down the sights.</summary>
         public float AimAmount => aim;
@@ -170,6 +174,8 @@ namespace Alcax.Player
                 {
                     var def = ItemDatabase.ForWeapon(w);
                     if (w != null && w != fists && def != null && inv.Count(def) == 0) inv.Add(def, 1, quiet: true);
+                    // ...with ammo to go with it: four magazines' worth in reserve
+                    if (w != null && w.IsGun && w.ammoType != AmmoType.None) AddAmmo(w.ammoType, Mathf.Max(1, w.magazineSize) * 4);
                 }
         }
 
@@ -206,7 +212,7 @@ namespace Alcax.Player
             {
                 var data = Current;
                 if (data == null) return;   // inventory lost to a script reload during Play mode
-                wantsAttackBlocked = HoldingItem || PlayerGrabber.Holding || Time.time - PlayerGrabber.LastRelease < 0.25f;
+                wantsAttackBlocked = HoldingItem || PlayerGrabber.Holding || (Time.time >= PlayerGrabber.LastRelease && Time.time - PlayerGrabber.LastRelease < 0.25f);   // (a release "in the future" is a stale value)
                 bool wantsAttack = !wantsAttackBlocked && (debugFire ||
                     (data.automatic || data.kind == WeaponKind.Melee ? attack.IsPressed() : attack.WasPressedThisFrame()));
 
@@ -311,6 +317,9 @@ namespace Alcax.Player
             if (e.ShellVis != null) { e.ShellVisPos = e.ShellVis.localPosition; e.ShellVis.gameObject.SetActive(false); }
             if (e.CasingVis != null) e.CasingVis.gameObject.SetActive(false);
 
+            e.Rig = view.GetComponent<PlasmaRig>();
+            if (e.Rig != null) e.Rig.Init(data);
+
             var tip = FindDeep(view.transform, "Tip");
             if (tip != null && FXManager.ParticleMaterial != null) e.Trail = MakeTrail(tip);
             view.SetActive(false);
@@ -328,7 +337,7 @@ namespace Alcax.Player
             return left < amount;
         }
 
-        public static string AmmoName(AmmoType t) => t == AmmoType.Shells ? "SHELLS" : t == AmmoType.Rifle ? "RIFLE ROUNDS" : "ROUNDS";
+        public static string AmmoName(AmmoType t) => t == AmmoType.Shells ? "SHELLS" : t == AmmoType.Rifle ? "RIFLE ROUNDS" : t == AmmoType.Energy ? "CHARGES" : "ROUNDS";
 
         void Equip(int index, bool silent = false)
         {
@@ -383,7 +392,12 @@ namespace Alcax.Player
             var o = owned[current];
             var data = o.Data;
 
-            if (data.kind == WeaponKind.Hitscan && o.Magazine <= 0)
+            if (data.kind == WeaponKind.Plasma && o.Rig != null && !o.Rig.CanFire)
+            {
+                nextAttackTime = Time.time + 0.12f;   // venting: the trigger does nothing until it has cooled
+                return;
+            }
+            if (data.IsGun && o.Magazine <= 0)
             {
                 SoundManager.Play2D(Sfx.Click, 0.7f);
                 nextAttackTime = Time.time + 0.3f;
@@ -404,6 +418,7 @@ namespace Alcax.Player
             }
 
             if (data.kind == WeaponKind.Melee) StartCoroutine(MeleeRoutine(data));
+            else if (data.kind == WeaponKind.Plasma) FirePlasma(o);
             else FireHitscan(o);
             Fired?.Invoke(data.kind == WeaponKind.Melee);
         }
@@ -573,6 +588,43 @@ namespace Alcax.Player
             if (o.Magazine <= 0) StartCoroutine(AutoReloadSoon());
         }
 
+        /// <summary>
+        /// Plasma: a visible bolt that travels (PlasmaBolt). It flies along the aim from the camera, its visual
+        /// starting at the emitter. Each shot heats the gun (PlasmaRig).
+        /// </summary>
+        void FirePlasma(Owned o)
+        {
+            var data = o.Data;
+            if (!AdminSettings.InfiniteAmmo) o.Magazine--;
+            var cam = aimCamera.transform;
+            Vector3 muzzle = o.Muzzle != null ? o.Muzzle.position : cam.position + cam.forward * 0.6f;
+            float spreadDeg = (data.spread + spreadBloom * 2.5f) * Mathf.Lerp(1f, 0.35f, aim);
+            Vector2 r = UnityEngine.Random.insideUnitCircle * Mathf.Tan(spreadDeg * Mathf.Deg2Rad);
+            Vector3 dir = (cam.forward + cam.right * r.x + cam.up * r.y).normalized;
+            PlasmaBolt.Fire(new PlasmaBolt.Shot
+            {
+                origin = cam.position, dir = dir, muzzle = muzzle,
+                speed = data.boltSpeed, range = data.range, damage = data.damage, knockback = data.knockback,
+                mask = hitMask, source = gameObject, ignore = controller.Health,
+                onHit = (h, killed, head) =>
+                {
+                    HitConfirmed?.Invoke(killed, head);
+                    if (killed) FeelManager.HitStop(data.hitStop);
+                },
+            });
+            o.Rig?.OnFire();
+            PlasmaFX.Muzzle(muzzle, cam.forward);
+            lastShotVoice = SoundManager.Play2D(Sfx.RifleShot, 0.55f, 0.08f);   // placeholder until the plasma sounds exist
+            FeelManager.Shake(data.shake);
+            controller.AddRecoil(data.recoil * Mathf.Lerp(1f, 0.7f, aim), 3.2f, 14f);
+            float aimK = Mathf.Lerp(1f, 0.6f, aim);
+            kickPosVel += new Vector3(UnityEngine.Random.Range(-0.1f, 0.1f), 0.25f, -2.0f) * aimK;
+            kickRotVel += new Vector3(-150f, UnityEngine.Random.Range(-50f, 50f), UnityEngine.Random.Range(-80f, 80f)) * aimK;
+            spreadBloom = Mathf.Min(1f, spreadBloom + 0.25f);
+            Changed?.Invoke();
+            if (o.Magazine <= 0) StartCoroutine(AutoReloadSoon());
+        }
+
         IEnumerator AutoReloadSoon()
         {
             yield return new WaitForSeconds(0.4f);
@@ -649,8 +701,9 @@ namespace Alcax.Player
             if (reloading || current < 0) return;
             var o = owned[current];
             var data = o.Data;
-            if (data.kind != WeaponKind.Hitscan || o.Magazine >= data.magazineSize) return;
-            if (inv == null || inv.CountAmmo(data.ammoType) <= 0) return;
+            bool free = AdminSettings.InfiniteAmmo;   // (infinite ammo: R always reloads, for free, so the reload can be seen)
+            if (!data.IsGun || (o.Magazine >= data.magazineSize && !free)) return;
+            if (!free && (inv == null || inv.CountAmmo(data.ammoType) <= 0)) return;
             reloadInterrupt = false;
             StartCoroutine(data.reloadPerShell ? ReloadShells(o) : ReloadMagazine(o));
         }
@@ -691,7 +744,7 @@ namespace Alcax.Player
             }, Ease.OutCubic, unscaled: false);
             SoundManager.Play2D(Sfx.MagIn, 0.85f, 0.04f);
 
-            int take = inv.TakeAmmo(o.Data.ammoType, o.Data.magazineSize - o.Magazine);
+            int take = AdminSettings.InfiniteAmmo ? o.Data.magazineSize - o.Magazine : inv.TakeAmmo(o.Data.ammoType, o.Data.magazineSize - o.Magazine);
             o.Magazine += take;
             Changed?.Invoke();
 
@@ -725,7 +778,8 @@ namespace Alcax.Player
             Vector3 shellBelow = new Vector3(0f, -0.06f, -0.02f);
 
             yield return new WaitForSeconds(0.12f);
-            while (o.Magazine < o.Data.magazineSize && inv.CountAmmo(o.Data.ammoType) > 0 && !reloadInterrupt)
+            bool showOne = AdminSettings.InfiniteAmmo && o.Magazine >= o.Data.magazineSize;   // (full, infinite ammo: still load one, visibly)
+            while ((o.Magazine < o.Data.magazineSize || showOne) && (AdminSettings.InfiniteAmmo || inv.CountAmmo(o.Data.ammoType) > 0) && !reloadInterrupt)
             {
                 // Hand moves from the pump to the port, holding a shell.
                 if (o.ShellVis != null)
@@ -746,7 +800,8 @@ namespace Alcax.Player
                 }, Ease.OutCubic, unscaled: false);
                 if (o.ShellVis != null) o.ShellVis.gameObject.SetActive(false);
                 SoundManager.Play2D(Sfx.ShellInsert, 0.8f, 0.06f);
-                if (inv.TakeAmmo(o.Data.ammoType, 1) > 0) o.Magazine++;
+                if (AdminSettings.InfiniteAmmo) { o.Magazine = Mathf.Min(o.Data.magazineSize, o.Magazine + 1); showOne = false; }
+                else if (inv.TakeAmmo(o.Data.ammoType, 1) > 0) o.Magazine++;
                 Changed?.Invoke();
 
                 // Hand returns toward the pump.
@@ -903,7 +958,7 @@ namespace Alcax.Player
 
             Vector3 pos = o.BasePos + swayPos * steady + controller.BobOffset * viewBobScale * steady;
             // Heuristic aim pose: a slight move toward center, a touch up and closer (no true sight alignment)
-            if (data.kind == WeaponKind.Hitscan) pos += aimPose * Ease.InOutCubic(aim);
+            if (data.IsGun) pos += aimPose * Ease.InOutCubic(aim);
             Quaternion rot = o.BaseRot * Quaternion.Euler(swayRot.x * steady, swayRot.y * steady, 0f);
 
             // Sprint pose: eased in and out instead of snapping (faster out when firing, so shots stay responsive)

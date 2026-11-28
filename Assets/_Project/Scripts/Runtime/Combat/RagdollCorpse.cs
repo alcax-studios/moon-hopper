@@ -17,6 +17,8 @@ namespace Alcax.Combat
         /// <summary>Ragdoll this character. Call after its animation scripts are disabled.</summary>
         public static RagdollCorpse Go(GameObject character, Vector3 hitDir, Vector3 hitPoint, float impulse)
         {
+            // An animated human (no primitive rig): the humanoid ragdoll
+            if (character.transform.Find("Rig") == null && character.TryGetComponent<Animator>(out var a) && a.isHuman) { HumanRagdoll.Go(character, hitDir, hitPoint, impulse); return null; }
             var c = character.GetComponent<RagdollCorpse>();
             if (c == null) c = character.AddComponent<RagdollCorpse>();
             c.Build(hitDir, hitPoint, impulse);

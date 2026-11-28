@@ -19,6 +19,11 @@ namespace Alcax.Player
         /// <summary>When the last object was let go (the click that throws shouldn't also fire the gun).</summary>
         public static float LastRelease = -10f;
 
+        // Play mode starts without a domain reload: statics keep last session's values while Time.time restarts at 0
+        // (a release at 138 s blocked every click of the next session for 138 s)
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() { LastRelease = -10f; Instance = null; }
+
         Camera cam;
         CharacterController cc;
         Rigidbody body;

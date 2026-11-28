@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29269017e85127e48bc41492e78646d6, type: 3}
+  m_Name: FXLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.FX.FXLibrary
+  glow: {fileID: 2100000, guid: df3cd48d1796b2649ac0cb3a353fe6a0, type: 2}
+  spark: {fileID: 2100000, guid: 2af7b403d74df3c41b94ad19aa0dc3bd, type: 2}
+  smoke: {fileID: 2100000, guid: a5f3bdcce65f5044a95a97684950f124, type: 2}
+  smokeTilesX: 8
+  smokeTilesY: 8
+  decal: {fileID: 2100000, guid: be24eedb5415f1541819413973984b38, type: 2}
+  arc: {fileID: 2100000, guid: b1d9d44e4c0dd5b449a6ca65faf32513, type: 2}
+  sandGrain: {fileID: 2100000, guid: 996558e6fbd6cb34a80415886c8d9d41, type: 2}
+  sandVeil: {fileID: 2100000, guid: 04f62c3aa19e7fb4fa53799932e0409d, type: 2}

@@ -51,3 +51,11 @@ Thumbs.db
 /Assets/_Project/Audio/Ambience.meta
 /Assets/_Project/Audio/Overrides/
 /Assets/_Project/Audio/Overrides.meta
+
+# Blender backups and local-only source art (licensed or scratch)
+*.blend1
+*.blend2
+/SourceArt/_local/
+
+# Blender working files and their bakes: kept local (the game uses the exports in Assets/; back these up separately)
+/SourceArt/

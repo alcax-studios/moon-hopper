@@ -90,6 +90,7 @@ namespace Alcax.EditorTools
             BuildStaff();
             BuildHotelPeople();
             BuildSecurity();
+            HumanCivilians.HumanizeScene();   // everyone placed above gets a human body (their logic unchanged)
             BuildExtraAmbience();
             BuildFX(sun);
             BuildProbes();
@@ -1019,13 +1020,56 @@ namespace Alcax.EditorTools
             return -3.5f + dunes + mesa + berm;
         }
 
+        // The near desert: a generated Kelxor terrain all around the station (see KelxorBuilder and TerrainSynth)
+        static readonly Rect NearDesert = new Rect(-410f, -300f, 820f, 820f);
+
         static void BuildExterior()
         {
-            var terrain = AtriumMeshes.Terrain(new Vector2(-1600f, 18.8f), new Vector2(1600f, 3200f), 240, DesertHeight, 8f);
-            var tg = MeshGO("Desert", terrain, "Sand", exterior, false);
+            // Near: generated terrain (wind-built dunes, a ring of eroded mesas 150 to 330 m out, flats under the
+            // station, pads, and solar field), color-matched scanned ground, scanned rocks placed by rules. Its edge
+            // blends into the far desert below so the seam doesn't show. Lit live by the sun (no baked GI).
+            var synth = new TerrainSynth
+            {
+                res = 2049, size = NearDesert.width, origin = NearDesert.position, baseY = -1f, seed = 4242,
+                droplets = 300000, rockRing = true, rockCenter = new Vector2(10f, -10f), rockFrom = 150f, rockTo = 330f,
+                edgeHeight = DesertHeight, edgeBlend = 90f,
+                // The view from the window: in front of the glass the ground stays below a sight line that rises
+                // gently with distance, over a wedge that widens outward; it lets go past about 260 m
+                heightCap = (x, z) =>
+                {
+                    float d = z - 18f;
+                    if (d < 0f) return Vector2.zero;
+                    float halfWidth = 40f + d * 0.9f;
+                    float side = Mathf.Clamp01(1f - (Mathf.Abs(x) - halfWidth) / 40f);
+                    float far = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(180f, 260f, d));
+                    return new Vector2(-1.4f + d * 0.035f, side * far);
+                },
+            };
+            synth.flats.Add(new TerrainSynth.Flat { rect = Rect.MinMaxRect(-31f, -48f, 57f, 18.6f), y = -1.0f, falloff = 12f });   // the station
+            synth.flats.Add(new TerrainSynth.Flat { rect = Rect.MinMaxRect(30f - 15f, 74f - 15f, 30f + 15f, 74f + 15f), y = -2.45f, falloff = 16f });   // pad A
+            synth.flats.Add(new TerrainSynth.Flat { rect = Rect.MinMaxRect(-55f - 19f, 150f - 19f, -55f + 19f, 150f + 19f), y = -2.65f, falloff = 16f });   // pad B
+            synth.flats.Add(new TerrainSynth.Flat { rect = Rect.MinMaxRect(-95f, 64f, -50f, 103f), y = -2.0f, falloff = 10f });   // solar field
+            synth.flats.Add(new TerrainSynth.Flat { rect = Rect.MinMaxRect(-50f, 55f, -42f, 63f), y = -3.0f, falloff = 6f });     // comms mast
+            synth.Generate();
+            var terrain = KelxorBuilder.BuildTerrain(synth, $"{Root}/Art/Terrain/Kelxor/TD_AtriumDesert.asset", false);
+            terrain.transform.SetParent(exterior, true);
+            terrain.basemapDistance = 4000f;
+            KelxorBuilder.ScatterRocks(synth, terrain, exterior, 4242, 0.55f);
+            KelxorBuilder.ScatterPlants(synth, terrain, exterior, 4243, 0.8f, new Vector2(10f, 10f), 260f);
+            // Keep the desert out of the AI navigation bake: squads map the whole NavMesh when they start, and a
+            // NavMesh over 820 m of desert took 7 s at load (the AI fight indoors and around the station)
+            terrain.gameObject.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
+            var rockRoot = exterior.Find("Rocks");
+            if (rockRoot != null) rockRoot.gameObject.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
+            var plantRoot = exterior.Find("Plants");
+            if (plantRoot != null) plantRoot.gameObject.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
+
+            // Far: the old desert mesh, all the way around, with a hole where the terrain is (and a hair lower)
+            var far = AtriumMeshes.Terrain(new Vector2(-1600f, -1600f), new Vector2(1600f, 3200f), 260, (x, z) => DesertHeight(x, z) - 0.4f, 8f, NearDesert);
+            var tg = MeshGO("DesertFar", far, "Sand", exterior, false);
             GameObjectUtility.SetStaticEditorFlags(tg, StaticEditorFlags.BatchingStatic);
 
-            // Base structures (no terrace: the dunes run right up to the glass)
+            // Base structures
             var metal = new MeshAccum();
             // Comms mast
             metal.BoxMinMax(new Vector3(-46.6f, -3f, 58.4f), new Vector3(-45.4f, 42f, 59.6f), 2f);
@@ -1045,23 +1089,27 @@ namespace Alcax.EditorTools
             beacon.BoxMinMax(new Vector3(-46.5f, 42f, 58.5f), new Vector3(-45.5f, 42.8f, 59.5f), 1f);
             MeshGO("Beacon", beacon.Build("Atrium_Beacon", false), "RedLight", exterior, false, false);
 
-            // Rocks and distant buttes
-            var rocks = new[] { "RockA", "RockB", "RockC" };
-            for (int i = 0; i < 40; i++)
+            // Distant buttes beyond the terrain: the scanned boulders, scaled up
+            var buttes = new[] { "SM_Rock_Boulder03", "SM_Rock_Boulder04", "SM_Rock_Boulder02" };
+            for (int i = 0; i < 60; i++)
             {
-                var mesh = AssetDatabase.LoadAssetAtPath<Mesh>($"{Root}/Art/Meshes/{rocks[i % 3]}.asset");
-                if (mesh == null) continue;
-                float x = R(-400f, 400f), z = R(60f, 900f);
-                float s = R(2f, 14f) * (1f + z / 300f);
-                var go = new GameObject("Rock", typeof(MeshFilter), typeof(MeshRenderer));
-                go.transform.SetParent(exterior, false);
-                go.transform.position = new Vector3(x, DesertHeight(x, z) - s * 0.2f, z);
-                go.transform.rotation = Quaternion.Euler(R(-8f, 8f), R(0f, 360f), R(-8f, 8f));
-                go.transform.localScale = new Vector3(s, s * R(0.4f, 0.9f), s * R(0.8f, 1.2f));
-                go.GetComponent<MeshFilter>().sharedMesh = mesh;
-                go.GetComponent<MeshRenderer>().sharedMaterial = mats["Rock"];
-                GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic);
+                float x = R(-900f, 900f), z = R(-900f, 1500f);
+                if (NearDesert.Contains(new Vector2(x, z))) continue;
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{Root}/Art/Models/Environment/{buttes[i % 3]}/{buttes[i % 3]}.fbx");
+                if (prefab == null) continue;
+                float s = R(5f, 16f) * (1f + Mathf.Abs(z) / 600f);
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, exterior);
+                go.transform.position = new Vector3(x, DesertHeight(x, z) - 0.4f - s * 0.25f, z);
+                go.transform.rotation = Quaternion.Euler(R(-6f, 6f), R(0f, 360f), R(-6f, 6f));
+                go.transform.localScale = new Vector3(s, s * R(0.6f, 1.1f), s);
+                foreach (var t in go.GetComponentsInChildren<Transform>()) t.gameObject.isStatic = true;
             }
+
+            // Wind for foliage and dust, and the blowing sand (kept out of the station)
+            if (Object.FindAnyObjectByType<Alcax.FX.WindManager>() == null) new GameObject("Wind").AddComponent<Alcax.FX.WindManager>();
+            var sand = new GameObject("BlowingSand").AddComponent<Alcax.FX.BlowingSand>();
+            sand.transform.SetParent(exterior, false);
+            sand.SetExclusions(new[] { Rect.MinMaxRect(-33f, -50f, 59f, 19.5f) });
         }
 
         // ---------- Loft-style exposed services (ceiling) ----------
@@ -1352,8 +1400,9 @@ namespace Alcax.EditorTools
             // Atrium ambience, contained by walls: heard through the hall door, then the range door
             var amb = new GameObject("AtriumAmbience").AddComponent<Alcax.FX.RoomAmbience>();
             amb.transform.SetParent(root, false);
-            SetRef(amb, "clip", AssetDatabase.LoadAssetAtPath<AudioClip>($"{Root}/Audio/Ambience/atrium_ambience.mp3"));
+            SetRef(amb, "clip", AssetDatabase.LoadAssetAtPath<AudioClip>($"{Root}/Audio/Ambience/atrium_crowd.mp3"));   // (freesound community: convention crowd noise)
             var ambSo = new SerializedObject(amb);
+            ambSo.FindProperty("volume").floatValue = 0.15f;
             ambSo.FindProperty("roomMin").vector3Value = new Vector3(-HX, -1f, -HZ);
             ambSo.FindProperty("roomMax").vector3Value = new Vector3(HX, CeilY + 1f, HZ + 2f);
             ambSo.ApplyModifiedPropertiesWithoutUndo();
@@ -2132,7 +2181,7 @@ static readonly List<(Vector3 pos, Vector3 facing)> cafeSeats = new();
             {
                 case 0:   // the quartermaster
                     t.shopName = "Armory";
-                    Stock(("pistol", 2), ("shotgun", 1), ("rifle", 1), ("machete", 1), ("bat", 1), ("ammo_light", 120), ("ammo_shells", 48), ("ammo_rifle", 150),
+                    Stock(("pistol", 2), ("shotgun", 1), ("rifle", 1), ("plasma_carbine", 1), ("machete", 1), ("bat", 1), ("ammo_light", 120), ("ammo_shells", 48), ("ammo_rifle", 150), ("ammo_energy", 128),
                           ("bandage", 6), ("medkit", 3), ("helmet_security", 2), ("vest_armored", 1), ("gloves_tactical", 2), ("boots_work", 1));
                     t.buys = new List<Alcax.Items.ItemCategory> { Alcax.Items.ItemCategory.Weapon, Alcax.Items.ItemCategory.Ammo, Alcax.Items.ItemCategory.Wearable, Alcax.Items.ItemCategory.Aid, Alcax.Items.ItemCategory.Misc };
                     t.markup = 1.2f; t.buyRate = 0.5f; t.budgetRange = new Vector2Int(600, 1100);
@@ -2157,7 +2206,9 @@ static readonly List<(Vector3 pos, Vector3 facing)> cafeSeats = new();
 
         static void BuildSecurity()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{Root}/Prefabs/AI/OP_Guard.prefab");
+            // Guards: the animated human body once built (Alcax > Art > Build Human Operatives), else the mannequin
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{Root}/Prefabs/AI/OP_HumanGuard.prefab");
+            if (prefab == null) prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{Root}/Prefabs/AI/OP_Guard.prefab");
             var arc = AssetDatabase.LoadAssetAtPath<Alcax.AI.EnemyArchetype>($"{Root}/Data/AI/ARC_Guard.asset");
             var fac = AssetDatabase.LoadAssetAtPath<Alcax.AI.Faction>($"{Root}/Data/AI/FAC_Security.asset");
             var cfg = AssetDatabase.LoadAssetAtPath<Alcax.AI.CombatAIConfig>($"{Root}/Data/AI/CombatAIConfig.asset");

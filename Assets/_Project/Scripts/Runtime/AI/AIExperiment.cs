@@ -98,7 +98,7 @@ namespace Alcax.AI
             }
             var gm = GameManager.Instance;
             gm.SetState(GameState.Playing, true);
-            AdminSettings.GodMode = true;
+            AdminSettings.SetGodModeForSession(true);   // (an automated run: not saved into the tester's settings)
             var dir = FindAnyObjectByType<PlaygroundDirector>();
             var admin = AdminTools.Instance;
             var cfg = admin != null ? admin.Config : null;

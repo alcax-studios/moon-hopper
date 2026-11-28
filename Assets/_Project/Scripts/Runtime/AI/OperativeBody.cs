@@ -10,7 +10,7 @@ namespace Alcax.AI
     /// Arms: two-bone IK onto the weapon grips. The weapon points exactly where the aim model points,
     /// so what you see is where the bullets go.
     /// </summary>
-    public class OperativeBody : MonoBehaviour
+    public class OperativeBody : MonoBehaviour, IOperativeBody
     {
         // Driven by the Operative each frame
         public Vector3 Velocity { get; set; }
@@ -37,6 +37,8 @@ namespace Alcax.AI
 
         public Transform Head => head;
         public Transform Muzzle => muzzle;
+        public Transform Torso => body;
+        public void Ragdoll(Vector3 hitDir, Vector3 hitPoint, float impulse) => Alcax.Combat.RagdollCorpse.Go(gameObject, hitDir, hitPoint, impulse);
 
         Transform rig, body, head, armL, armR, elbowL, elbowR, legL, legR, kneeL, kneeR, shoeL, shoeR, weapon, muzzle, gripR, gripL;
         Vector3 rigBase, bodyBase;

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc20a19928fffa4ba80406f22559c34, type: 3}
+  m_Name: IT_plasma_carbine
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Items.ItemDefinition
+  id: plasma_carbine
+  displayName: Plasma Carbine
+  description: PC-1 from the R&D division. Fires plasma bolts on energy cells; overheats if you hold the trigger too long.
+  category: 0
+  maxStack: 1
+  worldModel: {fileID: 3113773016102171879, guid: 0d8ef019e31555849bd071cce6426d3b, type: 3}
+  heldScale: 1
+  mass: 3.1
+  value: 950
+  weapon: {fileID: 11400000, guid: a72e151d333292f4f8fb6c06daa8d266, type: 2}
+  ammoType: 0
+  heal: 0
+  useTime: 1
+  hunger: 0
+  thirst: 0
+  energy: 0
+  effect: 
+  slot: 0
+  wearStyle: 0
+  wearColor: {r: 0.4, g: 0.42, b: 0.45, a: 1}
+  armor: 0

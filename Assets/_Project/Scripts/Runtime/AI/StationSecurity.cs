@@ -18,6 +18,8 @@ namespace Alcax.AI
         public static StationSecurity Instance { get; private set; }
 
         [SerializeField] GameObject guardPrefab;
+        [Tooltip("Different-looking guards (same mind): each guard spawns as one of these, in turn. Empty: guardPrefab.")]
+        [SerializeField] GameObject[] guardVariants;
         [SerializeField] EnemyArchetype guardArchetype;
         [SerializeField] CombatAIConfig config;
         [SerializeField] Faction faction;
@@ -106,7 +108,8 @@ public bool Wanted { get; private set; }
             var route = routes[i % routes.Length];
             var at = route != null && route.Count > 0 ? route.Point(0) : transform.position;
             if (!NavMesh.SamplePosition(at, out var hit, 4f, NavMesh.AllAreas)) return;
-            var obj = Instantiate(guardPrefab, hit.position, Quaternion.identity, squad.transform);
+            var prefab = guardVariants != null && guardVariants.Length > 0 && guardVariants[i % guardVariants.Length] != null ? guardVariants[i % guardVariants.Length] : guardPrefab;
+            var obj = Instantiate(prefab, hit.position, Quaternion.identity, squad.transform);
             obj.name = "Guard " + (i + 1);
             var op = obj.GetComponent<Operative>();
             op.Init(guardArchetype, config, faction, squad, route);

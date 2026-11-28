@@ -20,6 +20,7 @@ namespace Alcax.EditorTools
         {
             BuildWeaponData();
             BuildPickups();
+            PlasmaCarbineAssets.Build();   // the first asset from the art pipeline (Art/Models/Weapons/SM_PlasmaCarbine)
             AssetDatabase.SaveAssets();
         }
 
@@ -169,7 +170,7 @@ namespace Alcax.EditorTools
             casing.gameObject.SetActive(false);
         }
 
-        static GameObject Hand(Transform p, string name, Vector3 pos, Vector3 euler)
+        internal static GameObject Hand(Transform p, string name, Vector3 pos, Vector3 euler)
         {
             var h = Node(name, p, pos, euler);
             Prim(PrimitiveType.Cube, "Fist", h, Vector3.zero, new Vector3(0.07f, 0.075f, 0.085f), Vector3.zero, M("PlayerSkin"));
@@ -179,7 +180,7 @@ namespace Alcax.EditorTools
             return h.gameObject;
         }
 
-        static GameObject SavePrefab(GameObject go, string path)
+        internal static GameObject SavePrefab(GameObject go, string path)
         {
             // Guard: every behaviour must ship enabled (a disabled behaviour once froze every NPC).
             foreach (var mb in go.GetComponentsInChildren<MonoBehaviour>(true))
@@ -238,7 +239,7 @@ namespace Alcax.EditorTools
 
         // ---------- Pickups ----------
 
-        static Pickup PickupBase(string name, out Transform visual)
+        internal static Pickup PickupBase(string name, out Transform visual)
         {
             var root = new GameObject(name);
             visual = Node("Visual", root.transform, new Vector3(0, 0.35f, 0));
@@ -255,7 +256,7 @@ namespace Alcax.EditorTools
             return p;
         }
 
-        static Pickup SavePickup(Pickup p, string file)
+        internal static Pickup SavePickup(Pickup p, string file)
         {
             var go = SavePrefab(p.gameObject, $"{Root}/Prefabs/Pickups/{file}.prefab");
             return go.GetComponent<Pickup>();

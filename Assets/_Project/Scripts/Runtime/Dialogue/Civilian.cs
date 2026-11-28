@@ -33,6 +33,7 @@ namespace Alcax.Dialogue
         NavMeshAgent agent;
         Rigidbody rb;
         float panicUntil = -100f;
+        CornerLatch corner;
         Vector3 threatPos, postPos;
         Quaternion postRot;
         Coroutine staffRun, fight;
@@ -62,7 +63,9 @@ namespace Alcax.Dialogue
             // Pockets: searchable once dead
             var loot = GetComponent<Alcax.Items.LootContainer>();
             if (loot == null) loot = gameObject.AddComponent<Alcax.Items.LootContainer>();
-            loot.Configure("Body", "civilian", null, 8, transform.Find("Rig/Body"), health);
+            var torso = transform.Find("Rig/Body");
+            if (torso == null && TryGetComponent<Animator>(out var an) && an.isHuman) torso = an.GetBoneTransform(HumanBodyBones.Chest);   // (a human model)
+            loot.Configure("Body", "civilian", null, 8, torso, health);
             if (bravery < 0f) bravery = UnityEngine.Random.value;
             postPos = transform.position;
             postRot = transform.rotation;
@@ -93,7 +96,7 @@ var p = Foe();
                 {
                     float d = Vector3.Distance(transform.position, p.Position);
                     bool facingAway = Vector3.Angle(p.Forward.Flat(), (transform.position - p.Position).Flat()) > 110f;
-                    float score = bravery + (p.IsReloading ? 0.5f : 0f) + (facingAway ? 0.4f : 0f) + (Cornered(transform.position, p.Position) ? 0.25f : 0f)
+                    float score = bravery + (p.IsReloading ? 0.5f : 0f) + (facingAway ? 0.4f : 0f) + (Cornered(transform, p.Position) ? 0.25f : 0f)
                                   + (hitsTaken > 0 ? 0.2f : 0f) - d * 0.05f - (1f - health.Normalized) * 0.6f;
                     if (d < 10f && score > 0.95f) fight = StartCoroutine(Fight());
                 }
@@ -131,6 +134,9 @@ var p = Foe();
 
         void Scare(Vector3 from)
         {
+            // Squared up and fighting: stay in the fight (re-panicking the crowd routine ran its flee and huddle
+            // alongside, so up close they swung with their hands still up). The fight hands back to it when it ends.
+            if (fight != null) { threatPos = from; return; }
             panicUntil = Time.time + panicSeconds;
             if (npc != null && npc.InConversation && DialogueUI.Instance != null) DialogueUI.Instance.Close();
             threatPos = from;
@@ -140,9 +146,37 @@ var p = Foe();
 
 const int SightMask = ~((1 << 2) | (1 << 8));
 
-        /// <summary>The threat is close and has a clear line to me: no point running.</summary>
-        public static bool Cornered(Vector3 me, Vector3 threat)
-            => Vector3.Distance(me, threat) < 10f && !Physics.Linecast(threat + Vector3.up * 1.5f, me + Vector3.up * 1.3f, SightMask, QueryTriggerInteraction.Ignore);
+        /// <summary>
+        /// The threat is close and has a clear line to me: no point running. The line goes to my chest height and
+        /// ignores my own body (its hit colliders blocked it standing and cleared it crouched: hands up, down, up).
+        /// </summary>
+        public static bool Cornered(Transform self, Vector3 threat) => Seen(self, threat, 10f);
+
+        /// <summary>He's within range and has a clear line to my chest (my own body doesn't count as cover).</summary>
+        public static bool Seen(Transform self, Vector3 threat, float range)
+        {
+            var me = self.position;
+            if (Vector3.Distance(me, threat) >= range) return false;
+            var from = threat + Vector3.up * 1.5f;
+            var to = me + Vector3.up * 1.0f;
+            var d = to - from; float len = d.magnitude;
+            if (len < 0.01f) return true;
+            int n = Physics.RaycastNonAlloc(from, d / len, sightHits, len, SightMask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++) if (!sightHits[i].transform.IsChildOf(self)) return false;
+            return true;
+        }
+        static readonly RaycastHit[] sightHits = new RaycastHit[16];
+
+        /// <summary>A cornered-or-not decision that, once made, holds a while (no twitching between hands up and ducking).</summary>
+        public struct CornerLatch
+        {
+            bool on; float until;
+            public bool Update(bool raw)
+            {
+                if (raw != on && Time.time >= until) { on = raw; until = Time.time + (raw ? 3f : 2f); }
+                return on;
+            }
+        }
 
 /// <summary>
         /// Where to run. Borrowed from the combat AI: the candidate spots are NavGraph nodes (the whole walkable map,
@@ -234,14 +268,15 @@ const int SightMask = ~((1 << 2) | (1 << 8));
             bool fled = false;
             while (Panicking && !Dead)
             {
-                bool cornered = Cornered(transform.position, threatPos);
+                bool cornered = corner.Update(Cornered(transform, threatPos));
                 if (!cornered && !fled && agent != null)
                 {
                     var start = transform.position;
                     if (NavMesh.SamplePosition(start, out var onMesh, 2.5f, NavMesh.AllAreas)) start = onMesh.position;
                     agent.enabled = true;
                     agent.Warp(start);
-                    agent.speed = UnityEngine.Random.Range(3.4f, 4.2f);
+                    agent.speed = UnityEngine.Random.Range(5.8f, 7.2f);   // (flat out)
+                    agent.acceleration = 12f;
                     agent.isStopped = false;
                     npc.HandsUp = 0f;
                     if (agent.isOnNavMesh && agent.SetDestination(FleeSpot(agent, transform.position, threatPos)))
@@ -252,7 +287,7 @@ const int SightMask = ~((1 << 2) | (1 << 8));
                         {
                             npc.SitBlend = Mathf.MoveTowards(npc.SitBlend, 0f, Time.deltaTime * 3f);
                             npc.MoveSpeed = agent.velocity.magnitude;
-                            if (Cornered(transform.position, threatPos) && Vector3.Distance(transform.position, threatPos) < 5f) break;   // ran into him
+                            if (Cornered(transform, threatPos) && Vector3.Distance(transform.position, threatPos) < 5f) break;   // ran into him
                             yield return null;
                         }
                         if (Dead) yield break;
@@ -306,6 +341,7 @@ const int SightMask = ~((1 << 2) | (1 << 8));
         {
             var p = Foe();
             brain.Suspend();
+            npc.SitBlend = 0f; npc.HandsUp = 0f;   // (up off a huddle or a seat to fight: no punching from a crouch)
             panicUntil = -100f;
             int startHits = hitsTaken, punches = 0;
             float end = Time.time + 14f, nextPunch = 0f;

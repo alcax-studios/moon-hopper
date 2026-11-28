@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc20a19928fffa4ba80406f22559c34, type: 3}
+  m_Name: IT_suit_jacket
+  m_EditorClassIdentifier: Assembly-CSharp::Alcax.Items.ItemDefinition
+  id: suit_jacket
+  displayName: Suit jacket
+  description: A dark tailored jacket. Station security wears these on duty.
+  category: 4
+  maxStack: 1
+  worldModel: {fileID: 2839328282410430253, guid: ac2b958030dff3d4ca5a038599f7927a, type: 3}
+  heldScale: 0.7
+  mass: 1
+  value: 5
+  weapon: {fileID: 0}
+  ammoType: 0
+  heal: 0
+  useTime: 1
+  hunger: 0
+  thirst: 0
+  energy: 0
+  effect: 
+  slot: 2
+  wearStyle: 4
+  wearColor: {r: 0.16, g: 0.18, b: 0.25, a: 1}
+  armor: 2

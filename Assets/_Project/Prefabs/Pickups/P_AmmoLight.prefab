@@ -546,3 +546,5 @@ MonoBehaviour:
   visual: {fileID: 3064219062370220683}
   glow: {fileID: 8378062958047736887}
   autoRadius: 1.3
+  stationProperty: 0
+  owner: 

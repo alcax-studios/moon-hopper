@@ -51,6 +51,7 @@ namespace Alcax.Dialogue
         {
             agent = GetComponent<NavMeshAgent>();
             npc = GetComponent<Npc>();
+            walkSpeed *= Random.Range(0.92f, 1f);   // (an easy stroll, each their own pace)
             agent.speed = walkSpeed;
             agent.acceleration = 5f;
             agent.angularSpeed = 300f;
@@ -406,13 +407,15 @@ bool chatTurnFlip;
         float panicUntil = -100f;
         Vector3 panicFrom;
         bool panicking;
+        Civilian.CornerLatch corner;
+        bool suspended;   // (the body is someone else's for now: a fight)
         public bool Panicking => panicking;
 
 public void Panic(Vector3 from, float seconds)
         {
             panicUntil = Mathf.Max(panicUntil, Time.time + seconds);
             panicFrom = from;
-            if (panicking) return;   // already running: the flee loop re-plans only when its plan is compromised
+            if (panicking || suspended) return;   // already running (the flee loop re-plans only when its plan is compromised), or handed over to a fight
             panicking = true;
             if (routine != null) StopCoroutine(routine);
             npc.Typing = false; npc.Speaking = false; npc.LookTarget = null;
@@ -425,6 +428,7 @@ public void Panic(Vector3 from, float seconds)
         /// <summary>Hand the body over to something else for a while (a brave civilian picking a fight).</summary>
         public void Suspend()
         {
+            suspended = true;
             if (routine != null) StopCoroutine(routine);
             routine = null;
             Release();
@@ -439,7 +443,8 @@ public void Panic(Vector3 from, float seconds)
         /// <summary>Back to life after Suspend: panicked (run and hide) or calm.</summary>
         public void Resume(bool panic, Vector3 from)
         {
-            agent.speed = walkSpeed;
+            suspended = false;
+            agent.speed = walkSpeed; agent.acceleration = 5f;
             if (panic) { panicking = false; Panic(from, 25f); }
             else routine = StartCoroutine(Life());
         }
@@ -481,7 +486,8 @@ IEnumerator Flee()
                 // Run: pick a spot once, and stick to it unless it becomes clearly bad (re-planning at most every 3 s)
                 activity = Activity.Fleeing;
                 npc.SitBlend = 0f; npc.HandsUp = 0f;
-                agent.speed = Random.Range(3.4f, 4.3f);
+                agent.speed = Random.Range(5.8f, 7.2f);   // (flat out: running for their lives)
+                agent.acceleration = 12f;
                 var dest = FleeSpot(panicFrom);
                 lastPlan = Time.time;
                 if (agent.isOnNavMesh && agent.SetDestination(dest))
@@ -507,11 +513,10 @@ IEnumerator Flee()
                 while (Time.time < panicUntil)
                 {
                     npc.SitBlend = Mathf.MoveTowards(npc.SitBlend, 0.55f, Time.deltaTime * 2f);
-                    bool cornered = Civilian.Cornered(transform.position, panicFrom);
+                    bool cornered = corner.Update(Civilian.Cornered(transform, panicFrom));
                     npc.HandsUp = cornered ? 1f : 0f;
                     if (cornered) { var to = panicFrom - transform.position; to.y = 0f; if (to.sqrMagnitude > 0.01f) facingYaw = Quaternion.LookRotation(to).eulerAngles.y; }
-                    else if (Time.time - huddleStart > 4f && Vector3.Distance(transform.position, panicFrom) < 15f
-                             && !Physics.Linecast(panicFrom + Vector3.up * 1.5f, transform.position + Vector3.up * 1.2f, ~((1 << 2) | (1 << 8)), QueryTriggerInteraction.Ignore))
+                    else if (Time.time - huddleStart > 4f && Civilian.Seen(transform, panicFrom, 15f))   // (spotted out here: run somewhere else)
                     { move = true; break; }
                     yield return null;
                 }
@@ -521,7 +526,7 @@ IEnumerator Flee()
             while (npc.SitBlend > 0f) { npc.SitBlend = Mathf.MoveTowards(npc.SitBlend, 0f, Time.deltaTime * 1.5f); yield return null; }
             panicking = false;
             hasFacing = false;
-            agent.speed = walkSpeed;
+            agent.speed = walkSpeed; agent.acceleration = 5f;
             routine = StartCoroutine(Life());
         }
 

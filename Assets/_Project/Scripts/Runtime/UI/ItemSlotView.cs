@@ -80,7 +80,7 @@ namespace Alcax.UI
             if (has) icon.texture = PreviewStudio.Instance.Icon(s.def);
             if (placeholder != null) placeholder.enabled = !has;
             count.text = !has ? "" : s.def.Stackable ? s.count.ToString()
-                : s.def.weapon != null && s.def.weapon.magazineSize > 0 && s.def.weapon.kind == Combat.WeaponKind.Hitscan ? (s.loaded < 0 ? s.def.weapon.magazineSize : s.loaded).ToString() : "";
+                : s.def.weapon != null && s.def.weapon.magazineSize > 0 && s.def.weapon.IsGun ? (s.loaded < 0 ? s.def.weapon.magazineSize : s.loaded).ToString() : "";
             corner.text = !has ? "" : cornerText ?? (s.stolen ? "<color=#E86A5A>STOLEN</color>" : "");
             frame.color = selected ? Palette.Accent : hovered ? Palette.WithAlpha(Palette.AccentHot, 0.6f) : Palette.WithAlpha(Palette.Accent, has ? 0.12f : 0f);
         }

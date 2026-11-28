@@ -68,7 +68,7 @@ namespace Alcax.EditorTools
             var wh = player.AddComponent<WeaponHolder>();
             WeaponData LoadW(string n) => AssetDatabase.LoadAssetAtPath<WeaponData>($"{Root}/Data/Weapons/{n}.asset");
             SetRef(wh, "fists", LoadW("W_Fists"));
-            SetRefArray(wh, "allWeapons", new Object[] { LoadW("W_Bat"), LoadW("W_Machete"), LoadW("W_Pistol"), LoadW("W_Shotgun"), LoadW("W_Rifle") });
+            SetRefArray(wh, "allWeapons", new Object[] { LoadW("W_Bat"), LoadW("W_Machete"), LoadW("W_Pistol"), LoadW("W_Shotgun"), LoadW("W_Rifle"), LoadW("W_PlasmaCarbine") });
             SetRef(wh, "viewRoot", viewRoot);
             SetRef(wh, "aimCamera", cam);
             player.AddComponent<PlayerInteractor>();

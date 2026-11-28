@@ -31,6 +31,10 @@ MonoBehaviour:
   reloadTime: 2.1
   reloadPerShell: 0
   noiseRadius: 65
+  boltSpeed: 120
+  heatPerShot: 0.075
+  coolRate: 0.55
+  overheatTime: 1.8
   knockback: 0.6
   recoil: 1.15
   shake: 0.08

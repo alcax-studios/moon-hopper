@@ -78,6 +78,15 @@ namespace Alcax.Items
         }
 
         public bool HasFreeSlot() { EnsureRolled(); foreach (var s in slots) if (s == null) return true; return false; }
+
+        /// <summary>Add, making room if it's full (things that must be there, like the clothes on a body).</summary>
+        public void AddGrow(ItemStack s)
+        {
+            EnsureRolled();
+            if (s == null || s.IsEmpty) return;
+            if (!HasFreeSlot()) { System.Array.Resize(ref slots, slots.Length + 1); capacity = slots.Length; }
+            Add(s);
+        }
         public bool Empty { get { EnsureRolled(); if (credits > 0) return false; foreach (var s in slots) if (s != null) return false; return true; } }
 
         public int TakeCredits() { int c = credits; credits = 0; return c; }

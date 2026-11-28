@@ -134,6 +134,7 @@ bool wantLocked = State == GameState.Playing && !AdminSettings.ConsoleOpen;
         {
             ("Atrium", "Assets/_Project/Scenes/Atrium.unity"),
             ("AI Playground", "Assets/_Project/Scenes/Playground.unity"),
+            ("Kelxor Exterior", "Assets/_Project/Scenes/Kelxor.unity"),
         };
 
         /// <summary>Load a map and drop straight into play (no title screen).</summary>

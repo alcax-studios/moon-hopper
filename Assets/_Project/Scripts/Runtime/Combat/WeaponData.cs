@@ -2,8 +2,9 @@ using UnityEngine;
 
 namespace Alcax.Combat
 {
-    public enum WeaponKind { Melee, Hitscan }
-    public enum AmmoType { None, Light, Shells, Rifle }
+    /// <summary>Melee swings; Hitscan rounds land instantly; Plasma fires visible bolts that travel (PlasmaBolt).</summary>
+    public enum WeaponKind { Melee, Hitscan, Plasma }
+    public enum AmmoType { None, Light, Shells, Rifle, Energy }
     public enum WeaponSound { Fists, Blunt, Blade, Pistol, Shotgun, Rifle }
 
     [CreateAssetMenu(menuName = "Alcax/Weapon", fileName = "Weapon")]
@@ -36,10 +37,23 @@ namespace Alcax.Combat
         public bool reloadPerShell;
         public float noiseRadius = 35f;
 
+        [Header("Plasma (kind = Plasma)")]
+        [Tooltip("Bolt speed, m/s.")]
+        public float boltSpeed = 120f;
+        [Tooltip("Heat added per shot (1 = overheated).")]
+        public float heatPerShot = 0.075f;
+        [Tooltip("Heat lost per second while not firing.")]
+        public float coolRate = 0.55f;
+        [Tooltip("Seconds locked out after overheating (the vents open).")]
+        public float overheatTime = 1.8f;
+
         [Header("Feel")]
         public float knockback = 1f;
         public float recoil = 2f;
         public float shake = 0.2f;
         public float hitStop = 0.04f;
+
+        /// <summary>Has a magazine and shoots (hitscan or plasma).</summary>
+        public bool IsGun => kind != WeaponKind.Melee;
     }
 }

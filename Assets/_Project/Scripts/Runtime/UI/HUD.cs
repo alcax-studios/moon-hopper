@@ -36,6 +36,8 @@ namespace Alcax.UI
         float shownHealth = 1f, chipHealth = 1f, chipDelay;
 
         TextMeshProUGUI weaponName, ammoMag, ammoReserve, reloadText;
+        RectTransform heatRoot, heatFill;
+        Image heatImg;
         TextMeshProUGUI waveText, statsText, objectiveText, adminText;
         TextMeshProUGUI prompt;
         Image promptBg;
@@ -183,6 +185,13 @@ namespace Alcax.UI
             UIFactory.Place(ammoMag.rectTransform, new Vector2(1f, 0f), new Vector2(-120f, -6f), new Vector2(200f, 76f), new Vector2(1f, 0f));
             ammoReserve = UIFactory.Text("Reserve", wRoot, "", 30f, Palette.WithAlpha(Palette.UIBone, 0.7f), TextAlignmentOptions.BottomLeft, 2f);
             UIFactory.Place(ammoReserve.rectTransform, new Vector2(1f, 0f), new Vector2(-110f, 4f), new Vector2(110f, 40f), new Vector2(0f, 0f));
+            // Heat (plasma weapons): a thin bar under the ammo
+            heatRoot = UIFactory.Image("Heat", wRoot, new Color(1f, 1f, 1f, 0.12f)).rectTransform;
+            UIFactory.Place(heatRoot, new Vector2(1f, 0f), new Vector2(0f, -14f), new Vector2(230f, 5f), new Vector2(1f, 0f));
+            heatImg = UIFactory.Image("HeatFill", heatRoot, new Color(0.44f, 0.89f, 1f));
+            heatFill = heatImg.rectTransform;
+            heatFill.anchorMin = Vector2.zero; heatFill.anchorMax = Vector2.one; heatFill.offsetMin = heatFill.offsetMax = Vector2.zero;
+            heatRoot.gameObject.SetActive(false);
             reloadText = UIFactory.Text("Reload", root, "RELOADING", 22f, Palette.AccentHot, TextAlignmentOptions.Center, 10f);
             UIFactory.Place(reloadText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -70f), new Vector2(400f, 30f));
 
@@ -363,7 +372,7 @@ var stChip = UIFactory.Image("StaminaChip", stTrack.transform, Palette.WithAlpha
             var w = weapons.Current;
             if (w == null) return;
             weaponName.text = w.displayName.ToUpperInvariant();
-            if (w.kind == WeaponKind.Hitscan)
+            if (w.IsGun)
             {
                 ammoMag.text = weapons.Magazine.ToString();
                 ammoMag.color = weapons.Magazine == 0 ? Palette.UIHealth : Palette.UIBone;
@@ -374,9 +383,19 @@ var stChip = UIFactory.Image("StaminaChip", stTrack.transform, Palette.WithAlpha
                 ammoMag.text = "";
                 ammoReserve.text = "";
             }
-            bool showReload = weapons.Reloading ||
-                              (w.kind == WeaponKind.Hitscan && weapons.Magazine == 0 && weapons.Reserve == 0);
-            reloadText.text = weapons.Reloading ? "RELOADING" : "NO AMMO";
+            bool plasma = w.kind == WeaponKind.Plasma;
+            if (heatRoot.gameObject.activeSelf != plasma) heatRoot.gameObject.SetActive(plasma);
+            if (plasma)
+            {
+                float h = weapons.Heat;
+                heatFill.anchorMax = new Vector2(Mathf.Max(0.001f, h), 1f);
+                heatImg.color = weapons.Overheated
+                    ? Color.Lerp(new Color(1f, 0.42f, 0.17f), Color.white, 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 14f))
+                    : Color.Lerp(new Color(0.44f, 0.89f, 1f), new Color(1f, 0.95f, 0.85f), h * h);
+            }
+            bool showReload = weapons.Reloading || (plasma && weapons.Overheated) ||
+                              (w.IsGun && weapons.Magazine == 0 && weapons.Reserve == 0);
+            reloadText.text = weapons.Reloading ? "RELOADING" : plasma && weapons.Overheated ? "OVERHEATED" : "NO AMMO";
             reloadText.alpha = showReload ? 0.7f + 0.3f * Mathf.Sin(Time.unscaledTime * 8f) : 0f;
         }
 

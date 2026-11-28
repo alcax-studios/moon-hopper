@@ -18,7 +18,6 @@ namespace Alcax.AI
     /// </summary>
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Health))]
-    [RequireComponent(typeof(OperativeBody))]
     public class Operative : MonoBehaviour, ICombatTarget
     {
         public static readonly List<Operative> All = new();
@@ -57,7 +56,7 @@ namespace Alcax.AI
         public Vector3 EyePosition => body.Head.position;
         public Vector3 LookForward => body.Head.forward;
         public Vector3 AimForward => aim != null ? aim.Held : transform.forward;
-        public OperativeBody Body => body;
+        public IOperativeBody Body => body;
         public Vector3 MuzzlePosition => body.Muzzle != null ? body.Muzzle.position : EyePosition + transform.forward * 0.5f;
         public Vector3 ChestPosition => EyePosition + Vector3.down * 0.35f;
         public Vector3? ClaimedSpot { get; private set; }
@@ -97,7 +96,7 @@ namespace Alcax.AI
         readonly HashSet<Operative> mourned = new();
 
         NavMeshAgent agent;
-        OperativeBody body;
+        IOperativeBody body;
         OperativeAim aim;
         Rigidbody rb;
 
@@ -129,7 +128,7 @@ namespace Alcax.AI
         void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
-            body = GetComponent<OperativeBody>();
+            body = GetComponent<IOperativeBody>();
             Health = GetComponent<Health>();
             rb = GetComponent<Rigidbody>();
             if (config == null) config = ScriptableObject.CreateInstance<CombatAIConfig>();
@@ -218,7 +217,7 @@ namespace Alcax.AI
             var loot = GetComponent<Alcax.Items.LootContainer>();
             if (loot == null) loot = gameObject.AddComponent<Alcax.Items.LootContainer>();
             string table = faction == null ? "insurgents" : faction.displayName == "Station Security" ? "security" : faction.displayName.ToLowerInvariant();
-            loot.Configure("Body", table, null, 10, transform.Find("Rig/Body"), Health);
+            loot.Configure("Body", table, null, 10, body.Torso, Health);
         }
 
         /// <summary>Drop the gun as a world item (with whatever was left in its magazine).</summary>
@@ -1106,7 +1105,8 @@ void CheckSeenByPlayer(ICombatTarget p)
                     }
                     break;
             }
-            if ((Mind.Current != OpAction.Investigate || config.useAttention) && Mind.Current != OpAction.Surrender) body.LookPoint = null;
+            // (not while talking: UpdateTalk keeps the eyes on the player)
+            if ((Mind.Current != OpAction.Investigate || config.useAttention) && Mind.Current != OpAction.Surrender && !(talk != null && talk.InConversation)) body.LookPoint = null;
         }
 
         // ---------- Cover repertoire ----------
@@ -3076,7 +3076,7 @@ case Duty.Confront:
             body.Freeze();
             DropGunAsItem();
             // Loose limbs: a ragdoll that settles, then stays put (and never blocks the player)
-            Alcax.Combat.RagdollCorpse.Go(gameObject, dir + Vector3.up * 0.15f, point, 90f);
+            body.Ragdoll(dir + Vector3.up * 0.15f, point, 90f);
         }
 
         void OnDrawGizmosSelected()

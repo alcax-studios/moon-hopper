@@ -11,6 +11,7 @@
 | Navigation | AI Navigation 2.0.17 (installed; unused since the zombie removal) |
 | UI | uGUI and TextMeshPro, built from code |
 | Editor automation | `com.unity.pipeline` 1.0.1, driven by the Unity CLI |
+| Art pipeline | Blender 5.3 through blender-mcp; `Tools/blender/moon_hopper_export.py`; `ArtImportValidator` and `AssetBudgets` (Editor) apply import presets and check budgets under `Art/Models` ([asset-pipeline.md](../art/asset-pipeline.md)) |
 
 ## Scenes
 

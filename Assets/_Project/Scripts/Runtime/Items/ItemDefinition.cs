@@ -69,7 +69,7 @@ namespace Alcax.Items
             {
                 sb.Append($"Damage {weapon.damage:0}");
                 if (weapon.pellets > 1) sb.Append($" x{weapon.pellets}");
-                if (weapon.kind == WeaponKind.Hitscan) sb.Append($"   Magazine {weapon.magazineSize}   Range {weapon.range:0} m");
+                if (weapon.IsGun) sb.Append($"   Magazine {weapon.magazineSize}   Range {weapon.range:0} m");
                 else sb.Append("   Melee");
             }
             if (Consumable)

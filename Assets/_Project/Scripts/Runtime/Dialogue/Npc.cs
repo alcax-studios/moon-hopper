@@ -54,6 +54,15 @@ namespace Alcax.Dialogue
 
         void Awake()
         {
+            // An animated Humanoid (HumanMotor) moves its own body: only its head is needed (conversation focus)
+            var humanoid = transform.Find("Rig") == null ? GetComponent<Animator>() : null;
+            if (humanoid != null && humanoid.isHuman)
+            {
+                head = humanoid.GetBoneTransform(HumanBodyBones.Head);
+                drivesBody = false;
+                seed = Random.value * 10f;
+                return;
+            }
             rig = transform.Find("Rig") ?? transform;
             body = rig.Find("Body");
             head = body.Find("Head");

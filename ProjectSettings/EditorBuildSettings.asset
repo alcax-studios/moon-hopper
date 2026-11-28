@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Playground.unity
     guid: 534f7290c6d2f604cb79c3bfa9497862
+  - enabled: 1
+    path: Assets/_Project/Scenes/Kelxor.unity
+    guid: 210ccbbf430c75646a64bb7908497498
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

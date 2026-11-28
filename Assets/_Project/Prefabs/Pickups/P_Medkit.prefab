@@ -450,6 +450,8 @@ MonoBehaviour:
   visual: {fileID: 6172872724814829765}
   glow: {fileID: 2586799875377065973}
   autoRadius: 1.3
+  stationProperty: 0
+  owner: 
 --- !u!1 &5177472100688821611
 GameObject:
   m_ObjectHideFlags: 0

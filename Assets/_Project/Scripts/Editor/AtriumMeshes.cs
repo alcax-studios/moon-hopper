@@ -197,7 +197,7 @@ namespace Alcax.EditorTools
     public static class AtriumMeshes
     {
         /// <summary>A smooth desert heightfield (shared vertices, smooth normals).</summary>
-        public static Mesh Terrain(Vector2 min, Vector2 max, int res, System.Func<float, float, float> height, float tile)
+        public static Mesh Terrain(Vector2 min, Vector2 max, int res, System.Func<float, float, float> height, float tile, Rect? hole = null)
         {
             var acc = new MeshAccum();
             for (int j = 0; j <= res; j++)
@@ -214,6 +214,14 @@ namespace Alcax.EditorTools
                 for (int i = 0; i < res; i++)
                 {
                     int a = j * row + i;
+                    if (hole.HasValue)
+                    {
+                        // Skip quads fully inside the hole (the near terrain covers them)
+                        float x0 = Mathf.Lerp(min.x, max.x, i / (float)res), x1 = Mathf.Lerp(min.x, max.x, (i + 1) / (float)res);
+                        float z0 = Mathf.Lerp(min.y, max.y, j / (float)res), z1 = Mathf.Lerp(min.y, max.y, (j + 1) / (float)res);
+                        var hr = hole.Value;
+                        if (x0 >= hr.xMin && x1 <= hr.xMax && z0 >= hr.yMin && z1 <= hr.yMax) continue;
+                    }
                     acc.T.Add(a); acc.T.Add(a + row); acc.T.Add(a + 1);
                     acc.T.Add(a + 1); acc.T.Add(a + row); acc.T.Add(a + row + 1);
                 }
